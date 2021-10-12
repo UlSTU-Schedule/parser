@@ -10,7 +10,7 @@ import (
 const teacherScheduleURL = "https://old.ulstu.ru/schedule/teachers/%s"
 
 // GetTeacherFullSchedule - получение полного расписания для учителя
-func GetTeacherFullSchedule(teacherName string)(*types.TeacherSchedule, error){
+func GetTeacherFullSchedule(teacherName string) (*types.TeacherSchedule, error) {
 	scheduleURL, err := getTeacherURL(teacherName)
 	if err != nil {
 		return nil, err
@@ -30,15 +30,15 @@ func GetTeacherFullSchedule(teacherName string)(*types.TeacherSchedule, error){
 		// second week
 		if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
 			var indexDay, indexLesson int
-			if i % 10 == 0 {
+			if i%10 == 0 {
 				indexLesson = 7
-			} else{
-				indexLesson = i % 10 - 3
+			} else {
+				indexLesson = i%10 - 3
 			}
 			if i == 170 {
 				indexDay = 5
-			} else{
-				indexDay = (i / 10) % 10 - 1
+			} else {
+				indexDay = (i/10)%10 - 1
 			}
 			convertLessonSchedule(schedule, s, 1, indexDay, indexLesson, teacherName)
 		}
@@ -63,7 +63,7 @@ func convertLessonSchedule(schedule *types.TeacherSchedule, s *goquery.Selection
 			teacherGroupLesson.Room = splitHTML[2]
 
 			formattedElem := strings.Split(splitHTML[1], ".")
-			teacherGroupLesson.Name = strings.TrimSpace(formattedElem[len(formattedElem) - 1])
+			teacherGroupLesson.Name = strings.TrimSpace(formattedElem[len(formattedElem)-1])
 			switch formattedElem[0] {
 			case "лек":
 				teacherGroupLesson.Type = 0

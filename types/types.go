@@ -61,7 +61,7 @@ type TeacherLesson struct {
 // TeacherGroupLesson ...
 type TeacherGroupLesson struct {
 	Type    LessonType
-	Group  string
+	Group   string
 	Name    string
 	Teacher string
 	Room    string
