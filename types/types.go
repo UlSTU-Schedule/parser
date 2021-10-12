@@ -40,23 +40,28 @@ type GroupSubLesson struct {
 
 // TeacherSchedule ...
 type TeacherSchedule struct {
-	Weeks []TeacherWeek
+	Weeks [2]TeacherWeek
 }
 
 // TeacherWeek ...
 type TeacherWeek struct {
-	Days []TeacherDay
+	Days [6]TeacherDay
 }
 
 // TeacherDay ...
 type TeacherDay struct {
-	Lessons []TeacherLesson
+	Lessons [8]TeacherLesson
 }
 
 // TeacherLesson ...
 type TeacherLesson struct {
+	Groups []TeacherGroupLesson
+}
+
+// TeacherGroupLesson ...
+type TeacherGroupLesson struct {
 	Type    LessonType
-	Groups  []string
+	Group  string
 	Name    string
 	Teacher string
 	Room    string
