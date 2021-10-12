@@ -1,23 +1,23 @@
 package types
 
-// GroupSchedule ...
-type GroupSchedule struct {
-	Weeks [2]GroupWeek
+// Schedule ...
+type Schedule struct {
+	Weeks [2]Week
 }
 
-// GroupWeek ...
-type GroupWeek struct {
-	Days [6]GroupDay
+// Week ...
+type Week struct {
+	Days [6]Day
 }
 
-// GroupDay ...
-type GroupDay struct {
-	Lessons [8]GroupLesson
+// Day ...
+type Day struct {
+	Lessons [8]Lesson
 }
 
-// GroupLesson ...
-type GroupLesson struct {
-	SubLessons []GroupSubLesson
+// Lesson ...
+type Lesson struct {
+	SubLessons []SubLesson
 }
 
 // LessonType ...
@@ -29,37 +29,8 @@ const (
 	Practice
 )
 
-// GroupSubLesson ...
-type GroupSubLesson struct {
-	Type    LessonType
-	Group   string
-	Name    string
-	Teacher string
-	Room    string
-}
-
-// TeacherSchedule ...
-type TeacherSchedule struct {
-	Weeks [2]TeacherWeek
-}
-
-// TeacherWeek ...
-type TeacherWeek struct {
-	Days [6]TeacherDay
-}
-
-// TeacherDay ...
-type TeacherDay struct {
-	Lessons [8]TeacherLesson
-}
-
-// TeacherLesson ...
-type TeacherLesson struct {
-	Groups []TeacherGroupLesson
-}
-
-// TeacherGroupLesson ...
-type TeacherGroupLesson struct {
+// SubLesson ...
+type SubLesson struct {
 	Type    LessonType
 	Group   string
 	Name    string

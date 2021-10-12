@@ -9,76 +9,74 @@ import (
 
 const teacherScheduleURL = "https://old.ulstu.ru/schedule/teachers/%s"
 
-// GetTeacherFullSchedule - получение полного расписания для учителя
-func GetTeacherFullSchedule(teacherName string) (*types.TeacherSchedule, error) {
-	scheduleURL, err := getTeacherURL(teacherName)
+// GetFullTeacherSchedule returns the full teacher's schedule
+func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
+	teacherURL, err := getTeacherURL(teacher)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := getDocFromURL(scheduleURL)
+	doc, err := getDocFromURL(teacherURL)
 	if err != nil {
 		return nil, err
 	}
 
-	schedule := new(types.TeacherSchedule)
+	teacherSchedule := new(types.Schedule)
+
 	doc.Find("p").Each(func(i int, s *goquery.Selection) {
-		// first week
+		// first week lessons
 		if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-			convertLessonSchedule(schedule, s, 0, i/10-2, i%10-2, teacherName)
+			dayIdx := i/10 - 2
+			lessonIdx := i%10 - 2
+			teacherSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, s)
 		}
-		// second week
+		// second week lessons
 		if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
-			var indexDay, indexLesson int
+			var dayIdx, lessonIdx int
 			if i%10 == 0 {
-				indexLesson = 7
+				lessonIdx = 7
 			} else {
-				indexLesson = i%10 - 3
+				lessonIdx = i%10 - 3
 			}
 			if i == 170 {
-				indexDay = 5
+				dayIdx = 5
 			} else {
-				indexDay = (i/10)%10 - 1
+				dayIdx = (i/10)%10 - 1
 			}
-			convertLessonSchedule(schedule, s, 1, indexDay, indexLesson, teacherName)
+			teacherSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, s)
 		}
 	})
-	return schedule, nil
+	return teacherSchedule, nil
 }
 
-// convertLessonSchedule - конвертация html в объект расписания
-func convertLessonSchedule(schedule *types.TeacherSchedule, s *goquery.Selection, indexWeek int, indexDay int,
-	indexLesson int, teacherName string) {
-	font := s.Find("font")
-	fontHTML, _ := font.Html()
-	lesson := new(types.TeacherLesson)
-	if !strings.HasPrefix(fontHTML, "_") && fontHTML != "" {
-		splitHTML := strings.Split(fontHTML, "<br/>")
-		groups := strings.Split(splitHTML[0], ",")
-		lesson.Groups = make([]types.TeacherGroupLesson, 0, len(groups))
-		for _, group := range groups {
-			teacherGroupLesson := new(types.TeacherGroupLesson)
-			teacherGroupLesson.Teacher = teacherName
-			teacherGroupLesson.Group = group
-			teacherGroupLesson.Room = splitHTML[2]
-
-			formattedElem := strings.Split(splitHTML[1], ".")
-			teacherGroupLesson.Name = strings.TrimSpace(formattedElem[len(formattedElem)-1])
-			switch formattedElem[0] {
-			case "лек":
-				teacherGroupLesson.Type = 0
-			case "Лаб":
-				teacherGroupLesson.Type = 1
-			case "пр":
-				teacherGroupLesson.Type = 2
+// getTeacherLessonFromDoc returns *types.Lesson received from the HTML document
+func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson {
+	lesson := new(types.Lesson)
+	tableCellHTML, _ := s.Find("font").Html()
+	// if the table cell contains the lesson info
+	if !strings.HasPrefix(tableCellHTML, "_") && tableCellHTML != "" {
+		// <br/> separates the name of the lesson, the groups and the audience number
+		splitLessonInfoHTML := strings.Split(tableCellHTML, "<br/>")
+		lessonGroups := strings.Split(splitLessonInfoHTML[0], ",")
+		lesson.SubLessons = make([]types.SubLesson, 0, len(lessonGroups))
+		lessonTypeAndName := strings.Split(splitLessonInfoHTML[1], ".")
+		lessonType := determineLessonType(lessonTypeAndName[0])
+		lessonName := strings.TrimSpace(lessonTypeAndName[1])
+		for _, groupName := range lessonGroups {
+			groupLesson := types.SubLesson{
+				Type:    lessonType,
+				Group:   groupName,
+				Name:    lessonName,
+				Teacher: teacher,
+				Room:    splitLessonInfoHTML[2],
 			}
-			lesson.Groups = append(lesson.Groups, *teacherGroupLesson)
+			lesson.SubLessons = append(lesson.SubLessons, groupLesson)
 		}
-		schedule.Weeks[indexWeek].Days[indexDay].Lessons[indexLesson] = *lesson
 	}
+	return lesson
 }
 
-// getTeacherURL - получение ссылки на расписания преподавателя
+// getTeacherURL returns the url to the teacher's schedule on UlSTU site
 func getTeacherURL(teacherName string) (string, error) {
 	var teacherURL string
 
