@@ -14,8 +14,8 @@ const (
 	roomsRegexp              = `(\d.*[-_].+)|(\d)`
 )
 
-// GetFullGroupSchedule ...
-func GetFullGroupSchedule(groupName string) (*types.GroupSchedule, error) {
+// GetFullGroupSchedule returns the full group's schedule
+func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	scheduleURL, err := getGroupURL(groupName)
 	if err != nil {
 		return nil, err
@@ -26,26 +26,22 @@ func GetFullGroupSchedule(groupName string) (*types.GroupSchedule, error) {
 		return nil, err
 	}
 
-	groupSchedule := new(types.GroupSchedule)
+	groupSchedule := new(types.Schedule)
 
 	reFindTeacherAndRoom := regexp.MustCompile(fmt.Sprintf(`^%s %s$`, teachersRegexp, roomsRegexp))
 	reFindTeacher := regexp.MustCompile(teachersRegexp)
 	reFindRoom := regexp.MustCompile(roomsRegexp)
 
-	var (
-		lessonIdx int
-		dayIdx    int
-	)
-
 	doc.Find("p").Each(func(i int, s *goquery.Selection) {
 		// first week lessons
 		if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-			dayIdx = i/10 - 2
-			lessonIdx = i%10 - 2
-			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getLessonInfoFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			dayIdx := i/10 - 2
+			lessonIdx := i%10 - 2
+			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 		// second week lessons
 		if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
+			var lessonIdx, dayIdx int
 			if i%10 == 0 {
 				lessonIdx = 7
 				dayIdx = i/10 - 12
@@ -53,20 +49,20 @@ func GetFullGroupSchedule(groupName string) (*types.GroupSchedule, error) {
 				lessonIdx = i%10 - 3
 				dayIdx = i/10 - 11
 			}
-			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getLessonInfoFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 	})
 	return groupSchedule, nil
 }
 
-// getLessonInfoFromDoc ...
-func getLessonInfoFromDoc(groupName string, reFindTeacherAndRoom *regexp.Regexp, reFindTeacher *regexp.Regexp, reFindRoom *regexp.Regexp, s *goquery.Selection) *types.GroupLesson {
-	lesson := new(types.GroupLesson)
+// getGroupLessonFromDoc returns *types.Lesson received from the HTML document
+func getGroupLessonFromDoc(groupName string, reFindTeacherAndRoom *regexp.Regexp, reFindTeacher *regexp.Regexp, reFindRoom *regexp.Regexp, s *goquery.Selection) *types.Lesson {
+	lesson := new(types.Lesson)
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
 	if tableCellHTML != "" {
 		// the capacity of the slice is 5, because one subgroup cannot have more than 5 pairs at one time
-		lesson.SubLessons = make([]types.GroupSubLesson, 0, 5)
+		lesson.SubLessons = make([]types.SubLesson, 0, 5)
 		var (
 			// type of lessons that are located before teachers and rooms
 			subLessonType types.LessonType
@@ -79,7 +75,7 @@ func getLessonInfoFromDoc(groupName string, reFindTeacherAndRoom *regexp.Regexp,
 		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
 			// if the row contains teacher and room
 			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
-				subLesson := types.GroupSubLesson{
+				subLesson := types.SubLesson{
 					Type:    subLessonType,
 					Group:   groupName,
 					Name:    subLessonName,
@@ -101,7 +97,7 @@ func getLessonInfoFromDoc(groupName string, reFindTeacherAndRoom *regexp.Regexp,
 	return lesson
 }
 
-// getGroupURL ...
+// getGroupURL returns the url to the group's schedule on UlSTU site
 func getGroupURL(groupName string) (string, error) {
 	var groupURL string
 
