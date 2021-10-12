@@ -55,8 +55,13 @@ type TeacherDay struct {
 
 // TeacherLesson ...
 type TeacherLesson struct {
+	Groups []TeacherGroupLesson
+}
+
+// TeacherGroupLesson ...
+type TeacherGroupLesson struct {
 	Type    LessonType
-	Groups  []string
+	Group  string
 	Name    string
 	Teacher string
 	Room    string
