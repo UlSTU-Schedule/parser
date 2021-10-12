@@ -2,17 +2,17 @@ package types
 
 // GroupSchedule ...
 type GroupSchedule struct {
-	Weeks []GroupWeek
+	Weeks [2]GroupWeek
 }
 
 // GroupWeek ...
 type GroupWeek struct {
-	Days []GroupDay
+	Days [6]GroupDay
 }
 
 // GroupDay ...
 type GroupDay struct {
-	Lessons []GroupLesson
+	Lessons [8]GroupLesson
 }
 
 // GroupLesson ...
