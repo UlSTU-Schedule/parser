@@ -10,7 +10,7 @@ import (
 
 const (
 	groupScheduleURLTemplate = "https://old.ulstu.ru/schedule/students/part%d/%s"
-	teachersRegexp           = `([А-Яа-яё]+ [А-Я] [А-Я])|([Па-яa-w] кафедры|)`
+	teachersRegexp           = `([А-Яа-яё]+ [А-Я] [А-Я])|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	roomsRegexp              = `(\d.*[-_].+)|(\d)`
 )
 
@@ -28,132 +28,77 @@ func GetFullGroupSchedule(groupName string) (*types.GroupSchedule, error) {
 
 	groupSchedule := new(types.GroupSchedule)
 
-	// find strings that consists is teachers and rooms
-	re := regexp.MustCompile(fmt.Sprintf(`^%s %s$`, teachersRegexp, roomsRegexp))
+	reFindTeacherAndRoom := regexp.MustCompile(fmt.Sprintf(`^%s %s$`, teachersRegexp, roomsRegexp))
+	reFindTeacher := regexp.MustCompile(teachersRegexp)
+	reFindRoom := regexp.MustCompile(roomsRegexp)
 
-	// find teacher in string
-	reTeacher := regexp.MustCompile(teachersRegexp)
-
-	// find room in string
-	reRoom := regexp.MustCompile(roomsRegexp)
+	var (
+		lessonIdx int
+		dayIdx    int
+	)
 
 	doc.Find("p").Each(func(i int, s *goquery.Selection) {
 		// first week lessons
 		if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-			lesson := new(types.GroupLesson)
-
-			lessonInfo := s.Find("font")
-			lessonInfoHTML, _ := lessonInfo.Html()
-
-			// if the lesson exists
-			if lessonInfoHTML != "" {
-				// the capacity of the slice is 4, because one subgroup cannot have more than 4 pairs at one time
-				subLessons := make([]types.GroupSubLesson, 0, 4)
-				// each lesson corresponds to 1 or more teachers and rooms that follow it
-				lessonBeforeTeachersAndRooms := ""
-				// type of lessons that are located before teachers and rooms
-				var lessonType types.LessonType
-				// <br/> separates the name of the lesson with the teacher and the audience number
-				splitLessonInfoHTML := strings.Split(lessonInfoHTML, " <br/>")
-				// if <br/> doesn't separate anything, so we do not take it into account
-				for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
-					// if the row contains teacher and room
-					if re.MatchString(splitLessonInfoHTML[j]) {
-
-						subLesson := types.GroupSubLesson{
-							Type:    lessonType,
-							Group:   groupName,
-							Name:    lessonBeforeTeachersAndRooms,
-							Teacher: reTeacher.FindString(splitLessonInfoHTML[j]),
-							Room:    reRoom.FindString(splitLessonInfoHTML[j]),
-						}
-
-						subLessons = append(subLessons, subLesson)
-					} else {
-						lessonBeforeTeachersAndRooms = splitLessonInfoHTML[j]
-						// determine type of lesson
-						switch {
-						case strings.Contains(lessonBeforeTeachersAndRooms, "Лек."):
-							lessonType = types.Lecture
-						case strings.Contains(lessonBeforeTeachersAndRooms, "пр."):
-							lessonType = types.Practice
-						default:
-							lessonType = types.Laboratory
-						}
-					}
-				}
-				lesson.SubLessons = subLessons
-			}
-
-			dayNum := i/10 - 2
-			lessonNum := i%10 - 2
-			groupSchedule.Weeks[0].Days[dayNum].Lessons[lessonNum] = *lesson
+			dayIdx = i/10 - 2
+			lessonIdx = i%10 - 2
+			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getLessonInfoFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
-
 		// second week lessons
 		if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
-			lesson := new(types.GroupLesson)
-
-			lessonInfo := s.Find("font")
-			lessonInfoHTML, _ := lessonInfo.Html()
-
-			// if the lesson exists
-			if lessonInfoHTML != "" {
-				// the capacity of the slice is 4, because one subgroup cannot have more than 4 pairs at one time
-				subLessons := make([]types.GroupSubLesson, 0, 4)
-				// each lesson corresponds to 1 or more teachers and rooms that follow it
-				lessonBeforeTeachersAndRooms := ""
-				// type of lessons that are located before teachers and rooms
-				var lessonType types.LessonType
-				// <br/> separates the name of the lesson with the teacher and the audience number
-				splitLessonInfoHTML := strings.Split(lessonInfoHTML, " <br/>")
-				// if <br/> doesn't separate anything, so we do not take it into account
-				for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
-					// if the row contains teacher and room
-					if re.MatchString(splitLessonInfoHTML[j]) {
-
-						subLesson := types.GroupSubLesson{
-							Type:    lessonType,
-							Group:   groupName,
-							Name:    lessonBeforeTeachersAndRooms,
-							Teacher: reTeacher.FindString(splitLessonInfoHTML[j]),
-							Room:    reRoom.FindString(splitLessonInfoHTML[j]),
-						}
-
-						subLessons = append(subLessons, subLesson)
-					} else {
-						lessonBeforeTeachersAndRooms = splitLessonInfoHTML[j]
-						// determine type of lesson
-						switch {
-						case strings.Contains(lessonBeforeTeachersAndRooms, "Лек."):
-							lessonType = types.Lecture
-						case strings.Contains(lessonBeforeTeachersAndRooms, "пр."):
-							lessonType = types.Practice
-						default:
-							lessonType = types.Laboratory
-						}
-					}
-				}
-				lesson.SubLessons = subLessons
+			if i%10 == 0 {
+				lessonIdx = 7
+				dayIdx = i/10 - 12
+			} else {
+				lessonIdx = i%10 - 3
+				dayIdx = i/10 - 11
 			}
-
-			var (
-				lessonNum int
-				dayNum    int
-			)
-			switch {
-			case 3 <= i%10 && i%10 <= 9:
-				lessonNum = i%10 - 3
-				dayNum = i/10 - 11
-			case i%10 == 0:
-				lessonNum = 7
-				dayNum = i/10 - 12
-			}
-			groupSchedule.Weeks[1].Days[dayNum].Lessons[lessonNum] = *lesson
+			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getLessonInfoFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 	})
-
 	return groupSchedule, nil
+}
+
+// getLessonInfoFromDoc ...
+func getLessonInfoFromDoc(groupName string, reFindTeacherAndRoom *regexp.Regexp, reFindTeacher *regexp.Regexp, reFindRoom *regexp.Regexp, s *goquery.Selection) *types.GroupLesson {
+	lesson := new(types.GroupLesson)
+	tableCellHTML, _ := s.Find("font").Html()
+	// if the table cell contains the lesson info
+	if tableCellHTML != "" {
+		// the capacity of the slice is 5, because one subgroup cannot have more than 5 pairs at one time
+		lesson.SubLessons = make([]types.GroupSubLesson, 0, 5)
+		var (
+			// type of lessons that are located before teachers and rooms
+			subLessonType types.LessonType
+			// each lesson corresponds to 1 or more teachers and rooms that follow it
+			subLessonName string
+		)
+		// <br/> separates the name of the lesson with the teacher and the audience number
+		splitLessonInfoHTML := strings.Split(tableCellHTML, " <br/>")
+		// if <br/> doesn't separate anything, so we do not take it into account
+		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
+			// if the row contains teacher and room
+			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
+				subLesson := types.GroupSubLesson{
+					Type:    subLessonType,
+					Group:   groupName,
+					Name:    subLessonName,
+					Teacher: reFindTeacher.FindString(splitLessonInfoHTML[j]),
+					Room:    reFindRoom.FindString(splitLessonInfoHTML[j]),
+				}
+				lesson.SubLessons = append(lesson.SubLessons, subLesson)
+			} else {
+				if j == 0 {
+					subLessonTypeAndName := strings.Split(splitLessonInfoHTML[j], ".")
+					subLessonName = subLessonTypeAndName[1]
+					subLessonType = determineLessonType(subLessonTypeAndName[0])
+				} else {
+					subLessonName = splitLessonInfoHTML[j]
+				}
+			}
+		}
+	}
+	return lesson
 }
 
 // getGroupURL ...
