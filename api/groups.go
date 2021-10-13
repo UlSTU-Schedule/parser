@@ -37,7 +37,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
 			dayIdx := i/10 - 2
 			lessonIdx := i%10 - 2
-			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 		// second week lessons
 		if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
@@ -49,14 +49,14 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 				lessonIdx = i%10 - 3
 				dayIdx = i/10 - 11
 			}
-			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromDoc(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 	})
 	return groupSchedule, nil
 }
 
-// getGroupLessonFromDoc returns *types.Lesson received from the HTML document
-func getGroupLessonFromDoc(groupName string, reFindTeacherAndRoom *regexp.Regexp, reFindTeacher *regexp.Regexp, reFindRoom *regexp.Regexp, s *goquery.Selection) *types.Lesson {
+// getGroupLessonFromTableCell returns *types.Lesson received from the HTML table cell
+func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom *regexp.Regexp, reFindTeacher *regexp.Regexp, reFindRoom *regexp.Regexp, s *goquery.Selection) *types.Lesson {
 	lesson := new(types.Lesson)
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
