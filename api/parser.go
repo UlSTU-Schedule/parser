@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// getDocFromURL ...
+// getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
 	response, err := http.Get(URL)
 	if err != nil {
@@ -27,7 +27,7 @@ func getDocFromURL(URL string) (*goquery.Document, error) {
 	return goquery.NewDocumentFromReader(reader)
 }
 
-// determineLessonType ...
+// determineLessonType returns types.LessonType representation of a string.
 func determineLessonType(lessonType string) types.LessonType {
 	lessonType = strings.ToLower(lessonType)
 	switch lessonType {
@@ -37,5 +37,17 @@ func determineLessonType(lessonType string) types.LessonType {
 		return types.Practice
 	default:
 		return types.Laboratory
+	}
+}
+
+// getLessonTypeStr returns a string representation of types.LessonType.
+func getLessonTypeStr(lessonType types.LessonType) string {
+	switch lessonType {
+	case types.Lecture:
+		return "Лек."
+	case types.Practice:
+		return "Пр."
+	default:
+		return "Лаб."
 	}
 }

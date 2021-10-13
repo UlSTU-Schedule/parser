@@ -9,7 +9,7 @@ import (
 
 const teacherScheduleURL = "https://old.ulstu.ru/schedule/teachers/%s"
 
-// GetFullTeacherSchedule returns the full teacher's schedule
+// GetFullTeacherSchedule returns the full teacher's schedule.
 func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	teacherURL, err := getTeacherURL(teacher)
 	if err != nil {
@@ -49,7 +49,7 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	return teacherSchedule, nil
 }
 
-// getTeacherLessonFromDoc returns *types.Lesson received from the HTML document
+// getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
 func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson {
 	lesson := new(types.Lesson)
 	tableCellHTML, _ := s.Find("font").Html()
@@ -76,7 +76,7 @@ func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson
 	return lesson
 }
 
-// getTeacherURL returns the url to the teacher's schedule on UlSTU site
+// getTeacherURL returns the url to the teacher's schedule on UlSTU site.
 func getTeacherURL(teacherName string) (string, error) {
 	var teacherURL string
 
