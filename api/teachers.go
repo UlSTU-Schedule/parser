@@ -60,58 +60,45 @@ func GetTextDailyTeacherSchedule(teacherName string, daysAfterCurr int) (string,
 	dateStr := getDateStrBy(daysAfterCurr)
 	weekNum, _ := getWeekAndWeekdayNumbersBy(daysAfterCurr)
 
-	var teacherNameFormatted string
-	teacherNameSplit := strings.Split(teacherName, " ")
-	for indexNamePiece, namePiece := range teacherNameSplit {
-		if indexNamePiece == 0 {
-			teacherNameFormatted += fmt.Sprintf("%s ", namePiece)
-		}else if indexNamePiece == len(teacherNameSplit) - 1 {
-			teacherNameFormatted += fmt.Sprintf("%s.", namePiece)
-		}else{
-			teacherNameFormatted += fmt.Sprintf("%s. ", namePiece)
-		}
-	}
 	switch daysAfterCurr {
 	case 0:
-		result += fmt.Sprintf("Расписание %s на сегодня (%s, %d-ая учебная неделя):\n\n", teacherNameFormatted,
-			dateStr, weekNum+1)
+		result += fmt.Sprintf("%s проводит следующие пары сегодня (%s, %d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekNum + 1)
 	case 1:
-		result += fmt.Sprintf("Расписание %s на завтра (%s, %d-ая учебная неделя):\n\n", teacherNameFormatted,
-			dateStr, weekNum+1)
+		result += fmt.Sprintf("%s проводит следующие пары завтра (%s, %d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekNum + 1)
 	default:
-		result += fmt.Sprintf("Расписание %s на %s (%d-ая учебная неделя):\n\n", teacherNameFormatted,
-			dateStr, weekNum+1)
+		result += fmt.Sprintf("%s проводит следующие пары %s (%d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekNum + 1)
 	}
 	noLessons := true
 	for lessonIndex := 0; lessonIndex < len(dailySchedule.Lessons); lessonIndex++{
-		subLessonsAmount := len(dailySchedule.Lessons[lessonIndex].SubLessons)
-		if subLessonsAmount > 0 {
+		subLessons := dailySchedule.Lessons[lessonIndex].SubLessons
+
+		if len(subLessons) > 0 {
 			noLessons = false
 			groups := ""
-			for indexSubLesson, subLesson := range dailySchedule.Lessons[lessonIndex].SubLessons {
-				if indexSubLesson != subLessonsAmount - 1 {
+			for indexSubLesson, subLesson := range subLessons {
+				if indexSubLesson != len(subLessons) - 1 {
 					groups += fmt.Sprintf("%s, ", subLesson.Group)
 				} else{
 					groups += fmt.Sprintf("%s", subLesson.Group)
 				}
 			}
+
+			lessonNumber := lessonIndex + 1
+			lessonTime := lessonsTime[lessonIndex]
+			lessonType := subLessons[0].Type
+			lessonName := subLessons[0].Name
+			lessonTypeWithName := fmt.Sprintf("%s %s", getLessonTypeStr(lessonType), lessonName)
+			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
+			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
+
 			if len(strings.Split(groups, ",")) > 1 {
-				lessonNumber := lessonIndex + 1
-				lessonTime := lessonsTime[lessonIndex]
-				lessonType := dailySchedule.Lessons[lessonIndex].SubLessons[0].Type
-				lessonName := dailySchedule.Lessons[lessonIndex].SubLessons[0].Name
-				lessonTypeWithName := fmt.Sprintf("%s %s", getLessonTypeStr(lessonType), lessonName)
-				lessonRoom := dailySchedule.Lessons[lessonIndex].SubLessons[0].Room
-				result += fmt.Sprintf("%d-ая пара (%s): %s, %s. Группы: %s\n\n",
+				result += fmt.Sprintf("%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
 					lessonNumber, lessonTime, lessonTypeWithName, lessonRoom, groups)
 			} else {
-				lessonNumber := lessonIndex + 1
-				lessonTime := lessonsTime[lessonIndex]
-				lessonType := dailySchedule.Lessons[lessonIndex].SubLessons[0].Type
-				lessonName := dailySchedule.Lessons[lessonIndex].SubLessons[0].Name
-				lessonTypeWithName := fmt.Sprintf("%s %s", getLessonTypeStr(lessonType), lessonName)
-				lessonRoom := dailySchedule.Lessons[lessonIndex].SubLessons[0].Room
-				result += fmt.Sprintf("%d-ая пара (%s): %s, %s, %s\n\n",
+				result += fmt.Sprintf("%d-ая пара (%s): %s, %s, аудитория %s\n\n",
 					lessonNumber, lessonTime, lessonTypeWithName, groups, lessonRoom)
 			}
 		}
