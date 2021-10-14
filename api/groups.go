@@ -47,8 +47,7 @@ func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, err
 			result += fmt.Sprintf("%d-ая пара (%s): ", lessonNum+1, lessonsTime[lessonNum])
 
 			if len(dailySchedule.Lessons[lessonNum].SubLessons) == 1 {
-				formattedLesson := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Name, ".", ". ", -1)
-				formattedLesson = strings.Replace(formattedLesson, ",", ", ", -1)
+				formattedLesson := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Name, ",", ", ", -1)
 
 				formattedRoom := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Room, " ", "", -1)
 				formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
@@ -64,8 +63,7 @@ func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, err
 						continue
 					}
 
-					formattedLesson := strings.Replace(subgroupLesson.Name, ".", ". ", -1)
-					formattedLesson = strings.Replace(formattedLesson, ",", ", ", -1)
+					formattedLesson := strings.Replace(subgroupLesson.Name, ",", ", ", -1)
 
 					formattedRoom := strings.Replace(subgroupLesson.Room, " ", "", -1)
 					formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
