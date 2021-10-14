@@ -73,3 +73,22 @@ func getDateStrBy(daysDelta int) string {
 	timeWithDelta := time.Now().AddDate(0, 0, daysDelta)
 	return timeWithDelta.Format("02.01.2006")
 }
+
+func convertWeekdayToIndex(weekday string) int {
+	switch strings.ToLower(weekday) {
+	case "понедельник":
+		return 0
+	case "вторник":
+		return 1
+	case "среда":
+		return 2
+	case "четверг":
+		return 3
+	case "пятница":
+		return 4
+	case "суббота":
+		return 5
+	default:
+		return -1
+	}
+}
