@@ -6,7 +6,6 @@ import (
 	"github.com/ulstu-schedule/parser/types"
 	"regexp"
 	"strings"
-	"time"
 )
 
 const (
@@ -14,8 +13,6 @@ const (
 	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
 )
-
-var lessonsTime = [8]string{"08:30-09:50", "10:00-11:20", "11:30-12:50", "13:30-14:50", "15:00-16:20", "16:30-17:50", "18:00-19:20", "19:30-20:50"}
 
 // GetTextDailyGroupSchedule returns a text representation of the daily schedule.
 func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, error) {
@@ -238,23 +235,4 @@ func getGroupURL(groupName string) (string, error) {
 		}
 	}
 	return "", nil
-}
-
-// getWeekAndWeekdayNumbersBy increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
-func getWeekAndWeekdayNumbersBy(daysDelta int) (int, int) {
-	// getting the current time and adding daysDelta days to it
-	currTimeWithDelta := time.Now().AddDate(0, 0, daysDelta)
-
-	weekdayNum := int(currTimeWithDelta.Weekday()) - 1
-
-	_, currWeekNumWithDelta := currTimeWithDelta.ISOWeek()
-	weekNum := (currWeekNumWithDelta + 1) % 2
-
-	return weekNum, weekdayNum
-}
-
-// getDateStrBy increases the current time by daysDelta days and returns the string representation of the new date.
-func getDateStrBy(daysDelta int) string {
-	timeWithDelta := time.Now().AddDate(0, 0, daysDelta)
-	return timeWithDelta.Format("02.01.2006")
 }

@@ -49,6 +49,73 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	return teacherSchedule, nil
 }
 
+// GetTextDailyTeacherSchedule ...
+func GetTextDailyTeacherSchedule(teacherName string, daysAfterCurr int) (string, error) {
+	dailySchedule, err := getDailyTeacherSchedule(teacherName, daysAfterCurr)
+	if err != nil {
+		return "", err
+	}
+	var result string
+
+	dateStr := getDateStrBy(daysAfterCurr)
+	weekNum, _ := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+
+	switch daysAfterCurr {
+	case 0:
+		result += fmt.Sprintf("%s проводит следующие пары сегодня (%s, %d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekNum + 1)
+	case 1:
+		result += fmt.Sprintf("%s проводит следующие пары завтра (%s, %d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekNum + 1)
+	default:
+		result += fmt.Sprintf("%s проводит следующие пары %s (%d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekNum + 1)
+	}
+	noLessons := true
+	for lessonIndex := 0; lessonIndex < len(dailySchedule.Lessons); lessonIndex++{
+		subLessons := dailySchedule.Lessons[lessonIndex].SubLessons
+
+		if len(subLessons) > 0 {
+			noLessons = false
+			groups := ""
+			for indexSubLesson, subLesson := range subLessons {
+				if indexSubLesson != len(subLessons) - 1 {
+					groups += fmt.Sprintf("%s, ", subLesson.Group)
+				} else{
+					groups += fmt.Sprintf("%s", subLesson.Group)
+				}
+			}
+
+			lessonNumber := lessonIndex + 1
+			lessonTime := lessonsTime[lessonIndex]
+			lessonType := subLessons[0].Type
+			lessonName := subLessons[0].Name
+			lessonTypeWithName := fmt.Sprintf("%s %s", getLessonTypeStr(lessonType), lessonName)
+			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
+			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
+
+			if len(strings.Split(groups, ",")) > 1 {
+				result += fmt.Sprintf("%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
+					lessonNumber, lessonTime, lessonTypeWithName, lessonRoom, groups)
+			} else {
+				result += fmt.Sprintf("%d-ая пара (%s): %s, %s, аудитория %s\n\n",
+					lessonNumber, lessonTime, lessonTypeWithName, groups, lessonRoom)
+			}
+		}
+	}
+	if noLessons {
+		switch daysAfterCurr {
+		case 0:
+			result += "Сегодня пар нет"
+		case 1:
+			result += "Завтра пар нет"
+		default:
+			result += fmt.Sprintf("%s пар нет", dateStr)
+		}
+	}
+	return result, nil
+}
+
 // getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
 func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson {
 	lesson := new(types.Lesson)
@@ -61,7 +128,7 @@ func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson
 		lesson.SubLessons = make([]types.SubLesson, 0, len(lessonGroups))
 		lessonTypeAndName := strings.Split(splitLessonInfoHTML[1], ".")
 		lessonType := determineLessonType(lessonTypeAndName[0])
-		lessonName := strings.TrimSpace(lessonTypeAndName[1])
+		lessonName := strings.TrimSpace(lessonTypeAndName[len(lessonTypeAndName) - 1])
 		for _, groupName := range lessonGroups {
 			groupLesson := types.SubLesson{
 				Type:    lessonType,
@@ -96,4 +163,20 @@ func getTeacherURL(teacherName string) (string, error) {
 		return true
 	})
 	return teacherURL, nil
+}
+
+// getDailyTeacherSchedule ...
+func getDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, error) {
+	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekdayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	// returns weekdayNum = -1 when the day of the week is Sunday
+	if weekdayNum == -1 {
+		return &types.Day{}, nil
+	}
+
+	return &teacherFullSchedule.Weeks[weekNum].Days[weekdayNum], nil
 }
