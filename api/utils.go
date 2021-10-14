@@ -55,6 +55,14 @@ func getLessonTypeStr(lessonType types.LessonType) string {
 	}
 }
 
+// getWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
+func getWeekAndWeekDayNumbersByWeekDay(weekday string) (int, int) {
+	currWeekNum, _ := getWeekAndWeekdayNumbersBy(0)
+	weekdayNum := convertWeekdayToIndex(weekday)
+	return currWeekNum, weekdayNum
+}
+
+// (TODO: getWeekAndWeekdayNumbersBy -> getWeekAndWeekDayNumbers, daysDelta -> additionalDays)
 // getWeekAndWeekdayNumbersBy increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
 func getWeekAndWeekdayNumbersBy(daysDelta int) (int, int) {
 	// getting the current time and adding daysDelta days to it
@@ -68,12 +76,35 @@ func getWeekAndWeekdayNumbersBy(daysDelta int) (int, int) {
 	return weekNum, weekdayNum
 }
 
+// (TODO: getDateStrBy -> getDateStr, daysDelta -> additionalDays)
 // getDateStrBy increases the current time by daysDelta days and returns the string representation of the new date.
 func getDateStrBy(daysDelta int) string {
 	timeWithDelta := time.Now().AddDate(0, 0, daysDelta)
 	return timeWithDelta.Format("02.01.2006")
 }
 
+// convertWeekDayIdxToWeekDay converts the week day number to its string representation.
+func convertWeekDayIdxToWeekDay(weekDayIdx int) string {
+	switch weekDayIdx {
+	case 0:
+		return "Понедельник"
+	case 1:
+		return "Вторник"
+	case 2:
+		return "Среда"
+	case 3:
+		return "Четверг"
+	case 4:
+		return "Пятница"
+	case 5:
+		return "Суббота"
+	default:
+		return "Воскресенье"
+	}
+}
+
+// TODO: convertWeekdayToIndex -> convertWeekdayToWeekDayIdx
+// convertWeekdayToIndex converts the string representation of the day of the week to its index in the array.
 func convertWeekdayToIndex(weekday string) int {
 	switch strings.ToLower(weekday) {
 	case "понедельник":

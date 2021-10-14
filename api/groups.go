@@ -6,6 +6,7 @@ import (
 	"github.com/ulstu-schedule/parser/types"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -14,28 +15,77 @@ const (
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
 )
 
-// GetTextDailyGroupSchedule returns a text representation of the daily schedule.
-func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, error) {
-	dailySchedule, err := GetDailyGroupSchedule(groupName, daysAfterCurr)
+// GetTextDailyGroupScheduleByWeekDay returns a text representation of the daily schedule based on the selected day of the current week.
+func GetTextDailyGroupScheduleByWeekDay(groupName, weekDay string) (string, error) {
+	schedule, err := GetDailyGroupScheduleByWeekDay(groupName, weekDay)
 	if err != nil {
 		return "", err
 	}
+	weekDayNumNow := int(time.Now().Weekday()) - 1
+	weekDayNum := convertWeekdayToIndex(weekDay)
+	if weekDayNum == -1 {
+		weekDayNum = 6
+	}
+	return convertDailyGroupScheduleToText(groupName, schedule, weekDayNum-weekDayNumNow), nil
+}
 
+// GetDailyGroupScheduleByWeekDay returns *types.Day received from the full schedule based on the selected day of the current week.
+func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, error) {
+	schedule, err := GetFullGroupSchedule(groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
+	// returns weekDayNum = -1 when the day of the week is Sunday
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
+// GetTextDailyGroupSchedule returns a text representation of the daily schedule.
+func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, error) {
+	schedule, err := GetDailyGroupSchedule(groupName, daysAfterCurr)
+	if err != nil {
+		return "", err
+	}
+	return convertDailyGroupScheduleToText(groupName, schedule, daysAfterCurr), nil
+}
+
+// GetDailyGroupSchedule returns *types.Day received from the full schedule regarding how many days have passed relative to the current time.
+func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, error) {
+	schedule, err := GetFullGroupSchedule(groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	// returns weekDayNum = -1 when the day of the week is Sunday
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
+// convertDailyGroupScheduleToText converts the information that *types.Day contains into text.
+func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day, daysAfterCurr int) string {
 	result := ""
 
 	dateStr := getDateStrBy(daysAfterCurr)
-	weekNum, _ := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	weekDay := convertWeekDayIdxToWeekDay(weekDayNum)
 
 	switch daysAfterCurr {
 	case 0:
-		result = fmt.Sprintf("Расписание %s на сегодня (%s, %d-ая учебная неделя):\n\n", groupName,
-			dateStr, weekNum+1)
+		result = fmt.Sprintf("Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
+			weekDay, dateStr, weekNum+1)
 	case 1:
-		result = fmt.Sprintf("Расписание %s на завтра (%s, %d-ая учебная неделя):\n\n", groupName,
-			dateStr, weekNum+1)
+		result = fmt.Sprintf("Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
+			weekDay, dateStr, weekNum+1)
 	default:
-		result = fmt.Sprintf("Расписание %s на %s (%d-ая учебная неделя):\n\n", groupName,
-			dateStr, weekNum+1)
+		result = fmt.Sprintf("Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
+			dateStr, weekDay, weekNum+1)
 	}
 
 	noLessons := true
@@ -93,33 +143,18 @@ func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, err
 			result += fmt.Sprintf("%s пар нет", dateStr)
 		}
 	}
-	return result, nil
+
+	return result
 }
-
-// GetDailyGroupSchedule returns *types.Day received from the full schedule regarding how many days have passed relative to the current time.
-func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, error) {
-	fullGroupSchedule, err := GetFullGroupSchedule(groupName)
-	if err != nil {
-		return nil, err
-	}
-
-	weekNum, weekdayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
-	// returns weekdayNum = -1 when the day of the week is Sunday
-	if weekdayNum == -1 {
-		return &types.Day{}, nil
-	}
-	return &fullGroupSchedule.Weeks[weekNum].Days[weekdayNum], nil
-}
-
 
 // GetFullGroupSchedule returns the full group's schedule.
 func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
-	scheduleURL, err := getGroupURL(groupName)
+	url, err := getGroupScheduleURL(groupName)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := getDocFromURL(scheduleURL)
+	doc, err := getDocFromURL(url)
 	if err != nil {
 		return nil, err
 	}
@@ -198,9 +233,9 @@ func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom, reFindT
 	return lesson
 }
 
-// getGroupURL returns the url to the group's schedule on UlSTU site.
-func getGroupURL(groupName string) (string, error) {
-	var groupURL string
+// getGroupScheduleURL returns the url to the group's schedule on UlSTU site.
+func getGroupScheduleURL(groupName string) (string, error) {
+	result := ""
 
 	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
 		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, "raspisan.html"))
@@ -216,22 +251,22 @@ func getGroupURL(groupName string) (string, error) {
 					for _, foundGroupName = range foundGroupNames {
 						if foundGroupName == groupName {
 							href, _ := s.Find("a").Attr("href")
-							groupURL = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
+							result = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
 							return false
 						}
 					}
 				} else if foundGroupName == groupName {
 					href, _ := s.Find("a").Attr("href")
-					groupURL = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
+					result = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
 					return false
 				}
 			}
 			return true
 		})
 
-		if groupURL != "" {
-			return groupURL, nil
+		if result != "" {
+			return result, nil
 		}
 	}
-	return "", nil
+	return result, nil
 }
