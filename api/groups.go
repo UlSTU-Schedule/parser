@@ -111,6 +111,7 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 	return &fullGroupSchedule.Weeks[weekNum].Days[weekdayNum], nil
 }
 
+
 // GetFullGroupSchedule returns the full group's schedule.
 func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	scheduleURL, err := getGroupURL(groupName)
