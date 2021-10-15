@@ -146,7 +146,7 @@ func getWeekAndWeekDayNumbersByTime(time time.Time) (int, int) {
 	return weekNum, weekDayNum
 }
 
-// getDateTime ...
+// getDateTime returns time.Time object from the string representation of the date.
 func getDateTime(date string) (time.Time, error) {
 	day, month, year, err := getDayMonthYearByDate(date)
 	if err != nil {
