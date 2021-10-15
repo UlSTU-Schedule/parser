@@ -6,6 +6,7 @@ import (
 	"github.com/ulstu-schedule/parser/types"
 	"golang.org/x/text/encoding/charmap"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -68,6 +69,7 @@ func getWeekAndWeekdayNumbersBy(daysDelta int) (int, int) {
 	// getting the current time and adding daysDelta days to it
 	currTimeWithDelta := time.Now().AddDate(0, 0, daysDelta)
 
+	// TODO: replace 73-78 to return getWeekAndWeekDayNumbersByTime(currTimeWithDelta)
 	weekdayNum := int(currTimeWithDelta.Weekday()) - 1
 
 	_, currWeekNumWithDelta := currTimeWithDelta.ISOWeek()
@@ -122,4 +124,57 @@ func convertWeekdayToIndex(weekday string) int {
 	default:
 		return -1
 	}
+}
+
+// getWeekAndWeekDayNumbersByDate returns the number of the school week (0 or 1) and the number of the day of the
+// school week (-1, 0, ..., 6) by the string representation of the date.
+func getWeekAndWeekDayNumbersByDate(date string) (int, int, error) {
+	dateTime, err := getDateTime(date)
+	if err != nil {
+		return 0, 0, err
+	}
+	weekNum, weekDayNum := getWeekAndWeekDayNumbersByTime(dateTime)
+	return weekNum, weekDayNum, nil
+}
+
+// getWeekAndWeekDayNumbersByTime returns the number of the school week (0 or 1) and the number of the day of the
+// school week (-1, 0, ..., 6) by time.
+func getWeekAndWeekDayNumbersByTime(time time.Time) (int, int) {
+	weekDayNum := int(time.Weekday()) - 1
+	_, currWeekNumWithDelta := time.ISOWeek()
+	weekNum := (currWeekNumWithDelta + 1) % 2
+	return weekNum, weekDayNum
+}
+
+// getDateTime ...
+func getDateTime(date string) (time.Time, error) {
+	day, month, year, err := getDayMonthYearByDate(date)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local), nil
+}
+
+// getDayMonthYearByDate returns the day, month, and year extracted from the string representation of the date (Date
+// format: dd.mm). The year is considered equal to the current one.
+func getDayMonthYearByDate(date string) (int, int, int, error) {
+	year := time.Now().Year()
+	if isDateValid(fmt.Sprintf("%s.%d", date, year)) {
+		dateArray := strings.Split(date, ".")
+		day, _ := strconv.Atoi(dateArray[0])
+		month, _ := strconv.Atoi(dateArray[1])
+		return day, month, year, nil
+	} else {
+		return 0, 0, 0, fmt.Errorf("incorrect date: %s. correct format: dd.mm", date)
+	}
+}
+
+// isDateValid checks if the date is correct. The date is correct if it matches the format dd.mm and exists in the
+// current year.
+func isDateValid(date string) bool {
+	t, err := time.Parse("02.01.2006", date)
+	if err != nil {
+		return false
+	}
+	return t.Format("02.01.2006") == date
 }

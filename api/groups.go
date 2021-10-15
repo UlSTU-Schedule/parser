@@ -15,6 +15,52 @@ const (
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
 )
 
+// GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
+// representation of the date.
+func GetTextDailyGroupScheduleByDate(groupName, inputDate string) (string, error) {
+	schedule, err := GetDailyGroupScheduleByDate(groupName, inputDate)
+	if err != nil {
+		return "", err
+	}
+
+	inputDateTime, err := getDateTime(inputDate)
+	if err != nil {
+		return "", err
+	}
+
+	nowDateTime := time.Now()
+
+	// The difference in days between the entered date and the current date. Negative if the entered date is earlier
+	// than the current one, and positive if the entered date is later than the current one.
+	var diffBetweenInputAndCurrDates int
+	if nowDateTime.Before(inputDateTime) {
+		diffBetweenInputAndCurrDates = int(inputDateTime.Sub(nowDateTime).Hours()/24) + 1
+	} else {
+		diffBetweenInputAndCurrDates = int(nowDateTime.Sub(inputDateTime).Hours()/24) * (-1)
+	}
+	return convertDailyGroupScheduleToText(groupName, schedule, diffBetweenInputAndCurrDates), nil
+}
+
+// GetDailyGroupScheduleByDate returns *types.Day received from the full schedule based on the string representation
+// of the date.
+func GetDailyGroupScheduleByDate(groupName, date string) (*types.Day, error) {
+	schedule, err := GetFullGroupSchedule(groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekDayNum, err := getWeekAndWeekDayNumbersByDate(date)
+	if err != nil {
+		return nil, err
+	}
+
+	// returns weekDayNum = -1 when the day of the week is Sunday
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
 // GetTextDailyGroupScheduleByWeekDay returns a text representation of the daily schedule based on the selected day of the current week.
 func GetTextDailyGroupScheduleByWeekDay(groupName, weekDay string) (string, error) {
 	schedule, err := GetDailyGroupScheduleByWeekDay(groupName, weekDay)
