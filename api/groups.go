@@ -32,11 +32,9 @@ func GetTextDailyGroupScheduleByDate(groupName, inputDate string) (string, error
 
 	// The difference in days between the entered date and the current date. Negative if the entered date is earlier
 	// than the current one, and positive if the entered date is later than the current one.
-	var diffBetweenInputAndCurrDates int
+	diffBetweenInputAndCurrDates := int(inputDateTime.Sub(nowDateTime).Hours() / 24)
 	if nowDateTime.Before(inputDateTime) {
-		diffBetweenInputAndCurrDates = int(inputDateTime.Sub(nowDateTime).Hours()/24) + 1
-	} else {
-		diffBetweenInputAndCurrDates = int(nowDateTime.Sub(inputDateTime).Hours()/24) * (-1)
+		diffBetweenInputAndCurrDates++
 	}
 	return convertDailyGroupScheduleToText(groupName, schedule, diffBetweenInputAndCurrDates), nil
 }

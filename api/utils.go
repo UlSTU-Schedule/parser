@@ -165,16 +165,37 @@ func getDayMonthYearByDate(date string) (int, int, int, error) {
 		month, _ := strconv.Atoi(dateArray[1])
 		return day, month, year, nil
 	} else {
-		return 0, 0, 0, fmt.Errorf("incorrect date: %s. correct format: dd.mm", date)
+		return 0, 0, 0, fmt.Errorf("incorrect date: %s", date)
 	}
 }
 
 // isDateValid checks if the date is correct. The date is correct if it matches the format dd.mm and exists in the
 // current year.
 func isDateValid(date string) bool {
-	t, err := time.Parse("02.01.2006", date)
+	dateTime, err := time.Parse("02.01.2006", date)
 	if err != nil {
 		return false
 	}
-	return t.Format("02.01.2006") == date
+
+	// if the entered date exists
+	if dateTime.Format("02.01.2006") == date {
+		now := time.Now()
+
+		fallSemStartTime := time.Date(now.Year(), time.Month(9), 1, 0, 0, 0, 0, time.Local)
+		fallSemEndTime := time.Date(now.Year(), time.Month(12), 30, 0, 0, 0, 0, time.Local)
+		// if the entered date and the current date correspond to the fall semester
+		if now.After(fallSemStartTime) && now.Before(fallSemEndTime) &&
+			dateTime.After(fallSemStartTime) && dateTime.Before(fallSemEndTime) {
+			return true
+		}
+
+		springSemStartTime := time.Date(now.Year(), time.Month(2), 1, 0, 0, 0, 0, time.Local)
+		springSemEndTime := time.Date(now.Year(), time.Month(6), 30, 0, 0, 0, 0, time.Local)
+		// if the entered date and the current date correspond to the spring semester
+		if now.After(springSemStartTime) && now.Before(springSemEndTime) &&
+			dateTime.After(springSemStartTime) && dateTime.Before(springSemEndTime) {
+			return true
+		}
+	}
+	return false
 }
