@@ -5,6 +5,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ulstu-schedule/parser/types"
 	"strings"
+	"time"
 )
 
 const teacherScheduleURL = "https://old.ulstu.ru/schedule/teachers/%s"
@@ -49,17 +50,108 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	return teacherSchedule, nil
 }
 
+
 // GetTextDailyTeacherSchedule ...
 func GetTextDailyTeacherSchedule(teacherName string, daysAfterCurr int) (string, error) {
-	dailySchedule, err := getDailyTeacherSchedule(teacherName, daysAfterCurr)
+	teacherDailySchedule, err := GetDailyTeacherSchedule(teacherName, daysAfterCurr)
 	if err != nil {
 		return "", err
 	}
-	var result string
 
+	return convertDailyTeacherScheduleToText(teacherName, *teacherDailySchedule, daysAfterCurr), nil
+}
+
+// GetTextDailyTeacherScheduleByDate ...
+func GetTextDailyTeacherScheduleByDate(teacherName, inputDate string) (string, error) {
+	teacherDailySchedule, err := GetDailyTeacherScheduleByDate(teacherName, inputDate)
+	if err != nil {
+		return "", nil
+	}
+
+	inputDateTime, err := getDateTime(inputDate)
+	if err != nil {
+		return "", err
+	}
+
+	nowDate := time.Now()
+
+	var differenceBetweenDate int
+	if inputDateTime.After(nowDate) {
+		differenceBetweenDate = int(inputDateTime.Sub(nowDate).Hours() / 24) + 1
+	}else{
+		differenceBetweenDate = int(inputDateTime.Sub(nowDate).Hours() / 24)
+	}
+	return convertDailyTeacherScheduleToText(teacherName, *teacherDailySchedule, differenceBetweenDate), nil
+}
+
+// GetTextDailyTeacherScheduleByWeekDay ...
+func GetTextDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (string, error) {
+	teacherDailySchedule, err := GetDailyTeacherScheduleByWeekDay(teacherName, weekDay)
+	if err != nil {
+		return "", err
+	}
+
+	weekDayNumNow := int(time.Now().Weekday()) - 1
+	weekDayNum := convertWeekdayToIndex(weekDay)
+	if weekDayNum == -1 {
+		weekDayNum = 6
+	}
+
+	return convertDailyTeacherScheduleToText(teacherName, *teacherDailySchedule, weekDayNum - weekDayNumNow), nil
+}
+
+func GetDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, error) {
+	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
+	if err != nil {
+		return &types.Day{}, err
+	}
+
+	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+	return &teacherFullSchedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
+
+func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error) {
+	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekDayNum, err := getWeekAndWeekDayNumbersByDate(date)
+	if err != nil {
+		return nil, err
+	}
+
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+
+	return &teacherFullSchedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
+// GetDailyTeacherSchedule ...
+func GetDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, error) {
+	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	// returns weekDayNum = -1 when the day of the week is Sunday
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+
+	return &teacherFullSchedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
+func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.Day, daysAfterCurr int)  string {
+	var result string
 	dateStr := getDateStrBy(daysAfterCurr)
 	weekNum, _ := getWeekAndWeekdayNumbersBy(daysAfterCurr)
-
 	switch daysAfterCurr {
 	case 0:
 		result += fmt.Sprintf("%s проводит следующие пары сегодня (%s, %d-ая учебная неделя):\n\n", teacherName,
@@ -113,7 +205,7 @@ func GetTextDailyTeacherSchedule(teacherName string, daysAfterCurr int) (string,
 			result += fmt.Sprintf("%s пар нет", dateStr)
 		}
 	}
-	return result, nil
+	return result
 }
 
 // getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
@@ -163,20 +255,4 @@ func getTeacherURL(teacherName string) (string, error) {
 		return true
 	})
 	return teacherURL, nil
-}
-
-// getDailyTeacherSchedule ...
-func getDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, error) {
-	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
-	if err != nil {
-		return nil, err
-	}
-
-	weekNum, weekdayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
-	// returns weekdayNum = -1 when the day of the week is Sunday
-	if weekdayNum == -1 {
-		return &types.Day{}, nil
-	}
-
-	return &teacherFullSchedule.Weeks[weekNum].Days[weekdayNum], nil
 }
