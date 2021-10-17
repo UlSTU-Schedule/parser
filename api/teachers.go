@@ -53,7 +53,7 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 
 // GetTextDailyTeacherSchedule ...
 func GetTextDailyTeacherSchedule(teacherName string, daysAfterCurr int) (string, error) {
-	teacherDailySchedule, err := getDailyTeacherSchedule(teacherName, daysAfterCurr)
+	teacherDailySchedule, err := GetDailyTeacherSchedule(teacherName, daysAfterCurr)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +63,7 @@ func GetTextDailyTeacherSchedule(teacherName string, daysAfterCurr int) (string,
 
 // GetTextDailyTeacherScheduleByDate ...
 func GetTextDailyTeacherScheduleByDate(teacherName, inputDate string) (string, error) {
-	teacherDailySchedule, err := getDailyTeacherScheduleByDate(teacherName, inputDate)
+	teacherDailySchedule, err := GetDailyTeacherScheduleByDate(teacherName, inputDate)
 	if err != nil {
 		return "", nil
 	}
@@ -86,7 +86,7 @@ func GetTextDailyTeacherScheduleByDate(teacherName, inputDate string) (string, e
 
 // GetTextDailyTeacherScheduleByWeekDay ...
 func GetTextDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (string, error) {
-	teacherDailySchedule, err := getDailyTeacherScheduleByWeekDay(teacherName, weekDay)
+	teacherDailySchedule, err := GetDailyTeacherScheduleByWeekDay(teacherName, weekDay)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +100,7 @@ func GetTextDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (string, 
 	return convertDailyTeacherScheduleToText(teacherName, *teacherDailySchedule, weekDayNum - weekDayNumNow), nil
 }
 
-func getDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, error) {
+func GetDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, error) {
 	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
 	if err != nil {
 		return &types.Day{}, err
@@ -114,7 +114,7 @@ func getDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, 
 }
 
 
-func getDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error) {
+func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error) {
 	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
 	if err != nil {
 		return nil, err
@@ -125,6 +125,22 @@ func getDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error)
 		return nil, err
 	}
 
+	if weekDayNum == -1 {
+		return &types.Day{}, nil
+	}
+
+	return &teacherFullSchedule.Weeks[weekNum].Days[weekDayNum], nil
+}
+
+// GetDailyTeacherSchedule ...
+func GetDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, error) {
+	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
+	if err != nil {
+		return nil, err
+	}
+
+	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	// returns weekDayNum = -1 when the day of the week is Sunday
 	if weekDayNum == -1 {
 		return &types.Day{}, nil
 	}
@@ -239,20 +255,4 @@ func getTeacherURL(teacherName string) (string, error) {
 		return true
 	})
 	return teacherURL, nil
-}
-
-// getDailyTeacherSchedule ...
-func getDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, error) {
-	teacherFullSchedule, err := GetFullTeacherSchedule(teacherName)
-	if err != nil {
-		return nil, err
-	}
-
-	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
-
-	return &teacherFullSchedule.Weeks[weekNum].Days[weekDayNum], nil
 }
