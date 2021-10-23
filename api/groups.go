@@ -59,26 +59,29 @@ func GetDailyGroupScheduleByDate(groupName, date string) (*types.Day, error) {
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return &types.Day{}, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
-// GetTextDailyGroupScheduleByWeekDay returns a text representation of the daily schedule based on the selected day of the current week.
+// GetTextDailyGroupScheduleByWeekDay returns a text representation of the daily schedule based on the selected day of
+// the current week.
 func GetTextDailyGroupScheduleByWeekDay(groupName, weekDay string) (string, error) {
 	schedule, err := GetDailyGroupScheduleByWeekDay(groupName, weekDay)
 	if err != nil {
 		return "", err
 	}
+
 	weekDayNumNow := int(time.Now().Weekday()) - 1
-	weekDayNum := convertWeekdayToIndex(weekDay)
-	if weekDayNum == -1 {
+	weekDayNum := convertWeekdayToWeekDayIdx(weekDay)
+	if weekDayNum == -1 && weekDayNumNow != -1 {
 		weekDayNum = 6
 	}
 	return convertDailyGroupScheduleToText(groupName, schedule, weekDayNum-weekDayNumNow), nil
 }
 
-// GetDailyGroupScheduleByWeekDay returns *types.Day received from the full schedule based on the selected day of the current week.
+// GetDailyGroupScheduleByWeekDay returns *types.Day received from the full schedule based on the selected day of the
+// current week.
 func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, error) {
 	schedule, err := GetFullGroupSchedule(groupName)
 	if err != nil {
@@ -92,7 +95,7 @@ func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, erro
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return &types.Day{}, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -113,14 +116,14 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 		return nil, err
 	}
 
-	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 	// returns weekDayNum = -1 when the day of the week is Sunday
 	if weekDayNum == -1 {
 		return &types.Day{}, nil
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return &types.Day{}, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -129,8 +132,8 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day, daysAfterCurr int) string {
 	result := ""
 
-	dateStr := getDateStrBy(daysAfterCurr)
-	weekNum, weekDayNum := getWeekAndWeekdayNumbersBy(daysAfterCurr)
+	dateStr := getDateStr(daysAfterCurr)
+	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 	weekDay := convertWeekDayIdxToWeekDay(weekDayNum)
 
 	switch daysAfterCurr {
