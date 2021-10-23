@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ulstu-schedule/parser/types"
@@ -56,6 +57,10 @@ func GetDailyGroupScheduleByDate(groupName, date string) (*types.Day, error) {
 	if weekDayNum == -1 {
 		return &types.Day{}, nil
 	}
+
+	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
+		return &types.Day{}, errors.New("the schedule for the selected week is empty or not loaded yet")
+	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
@@ -85,6 +90,10 @@ func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, erro
 	if weekDayNum == -1 {
 		return &types.Day{}, nil
 	}
+
+	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
+		return &types.Day{}, errors.New("the schedule for the selected week is empty or not loaded yet")
+	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
@@ -108,6 +117,10 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 	// returns weekDayNum = -1 when the day of the week is Sunday
 	if weekDayNum == -1 {
 		return &types.Day{}, nil
+	}
+
+	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
+		return &types.Day{}, errors.New("the schedule for the selected week is empty or not loaded yet")
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
