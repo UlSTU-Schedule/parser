@@ -178,3 +178,15 @@ func isDateValid(date string) bool {
 	}
 	return t.Format("02.01.2006") == date
 }
+
+// isWeeklyScheduleEmpty returns true if the weekly schedule is empty, otherwise - false.
+func isWeeklyScheduleEmpty(week types.Week) bool {
+	for _, d := range week.Days {
+		for _, l := range d.Lessons {
+			if l.SubLessons != nil {
+				return false
+			}
+		}
+	}
+	return true
+}
