@@ -58,30 +58,22 @@ func getLessonTypeStr(lessonType types.LessonType) string {
 
 // getWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
 func getWeekAndWeekDayNumbersByWeekDay(weekday string) (int, int) {
-	currWeekNum, _ := getWeekAndWeekdayNumbersBy(0)
-	weekdayNum := convertWeekdayToIndex(weekday)
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	weekdayNum := convertWeekdayToWeekDayIdx(weekday)
 	return currWeekNum, weekdayNum
 }
 
-// (TODO: getWeekAndWeekdayNumbersBy -> getWeekAndWeekDayNumbers, daysDelta -> additionalDays)
-// getWeekAndWeekdayNumbersBy increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
-func getWeekAndWeekdayNumbersBy(daysDelta int) (int, int) {
-	// getting the current time and adding daysDelta days to it
-	currTimeWithDelta := time.Now().AddDate(0, 0, daysDelta)
+// getWeekAndWeekDayNumbers increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
+func getWeekAndWeekDayNumbers(additionalDays int) (int, int) {
+	// getting the current time and adding additionalDays days to it
+	currTimeWithDelta := time.Now().AddDate(0, 0, additionalDays)
 
-	// TODO: replace 73-78 to return getWeekAndWeekDayNumbersByTime(currTimeWithDelta)
-	weekdayNum := int(currTimeWithDelta.Weekday()) - 1
-
-	_, currWeekNumWithDelta := currTimeWithDelta.ISOWeek()
-	weekNum := (currWeekNumWithDelta + 1) % 2
-
-	return weekNum, weekdayNum
+	return getWeekAndWeekDayNumbersByTime(currTimeWithDelta)
 }
 
-// (TODO: getDateStrBy -> getDateStr, daysDelta -> additionalDays)
-// getDateStrBy increases the current time by daysDelta days and returns the string representation of the new date.
-func getDateStrBy(daysDelta int) string {
-	timeWithDelta := time.Now().AddDate(0, 0, daysDelta)
+// getDateStr increases the current time by daysDelta days and returns the string representation of the new date.
+func getDateStr(additionalDays int) string {
+	timeWithDelta := time.Now().AddDate(0, 0, additionalDays)
 	return timeWithDelta.Format("02.01.2006")
 }
 
@@ -105,9 +97,8 @@ func convertWeekDayIdxToWeekDay(weekDayIdx int) string {
 	}
 }
 
-// TODO: convertWeekdayToIndex -> convertWeekdayToWeekDayIdx
-// convertWeekdayToIndex converts the string representation of the day of the week to its index in the array.
-func convertWeekdayToIndex(weekday string) int {
+// convertWeekdayToWeekDayIdx converts the string representation of the day of the week to its index in the array.
+func convertWeekdayToWeekDayIdx(weekday string) int {
 	switch strings.ToLower(weekday) {
 	case "понедельник":
 		return 0
