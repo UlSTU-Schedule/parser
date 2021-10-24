@@ -5,6 +5,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ulstu-schedule/parser/types"
 	"golang.org/x/text/encoding/charmap"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -201,4 +202,10 @@ func isWeeklyScheduleEmpty(week types.Week) bool {
 		}
 	}
 	return true
+}
+
+// getRandInt returns a non-negative pseudo-random int.
+func getRandInt() int {
+	rand.Seed(time.Now().UTC().UnixNano())
+	return rand.Int()
 }

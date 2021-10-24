@@ -4,16 +4,30 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
 	groupScheduleURLTemplate = "https://old.ulstu.ru/schedule/students/part%d/%s"
 	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
+
+	imgWidth  = 1722
+	imgHeight = 1104
+
+	tableImgPath = "assets/weekly_schedule_template.png"
+	fontPath     = "assets/Arial.ttf"
+
+	headingTableFontSize    = 42
+	defaultScheduleFontSize = 19
+
+	cellWidth  = 200
+	cellHeight = 150
 )
 
 // GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
@@ -109,7 +123,8 @@ func GetTextDailyGroupSchedule(groupName string, daysAfterCurr int) (string, err
 	return convertDailyGroupScheduleToText(groupName, schedule, daysAfterCurr), nil
 }
 
-// GetDailyGroupSchedule returns *types.Day received from the full schedule regarding how many days have passed relative to the current time.
+// GetDailyGroupSchedule returns *types.Day received from the full schedule regarding how many days have passed
+// relative to the current time.
 func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, error) {
 	schedule, err := GetFullGroupSchedule(groupName)
 	if err != nil {
@@ -157,9 +172,11 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 			result += fmt.Sprintf("%d-ая пара (%s): ", lessonNum+1, lessonsTime[lessonNum])
 
 			if len(dailySchedule.Lessons[lessonNum].SubLessons) == 1 {
-				formattedLesson := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Name, ",", ", ", -1)
+				formattedLesson := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Name, ",",
+					", ", -1)
 
-				formattedRoom := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Room, " ", "", -1)
+				formattedRoom := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Room, " ", "",
+					-1)
 				formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
 
 				lessonTypeStr := getLessonTypeStr(dailySchedule.Lessons[lessonNum].SubLessons[0].Type)
@@ -169,7 +186,8 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 			} else {
 				var subgroupsLessonsOnCurrLesson string
 				for _, subgroupLesson := range dailySchedule.Lessons[lessonNum].SubLessons {
-					if strings.Contains(subgroupLesson.Name, subgroupLesson.Teacher) || strings.Contains(subgroupLesson.Name, subgroupLesson.Room) {
+					if strings.Contains(subgroupLesson.Name, subgroupLesson.Teacher) ||
+						strings.Contains(subgroupLesson.Name, subgroupLesson.Room) {
 						continue
 					}
 
@@ -207,6 +225,247 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 	return result
 }
 
+// GetCurrWeekGroupScheduleImg returns the path to the image with the weekly schedule based on the current school week.
+func GetCurrWeekGroupScheduleImg(groupName string) (string, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	return GetWeeklyGroupScheduleImg(groupName, currWeekNum)
+}
+
+// GetNextWeekGroupScheduleImg returns the path to the image with the weekly schedule based on the next school week.
+func GetNextWeekGroupScheduleImg(groupName string) (string, error) {
+	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	return GetWeeklyGroupScheduleImg(groupName, nextWeekNum)
+}
+
+// GetCurrWeekGroupSchedule returns *types.Week received from the full schedule based on the current school week.
+func GetCurrWeekGroupSchedule(groupName string) (*types.Week, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	return GetWeeklyGroupSchedule(groupName, currWeekNum)
+}
+
+// GetNextWeekGroupSchedule returns *types.Week received from the full schedule based on the next school week.
+func GetNextWeekGroupSchedule(groupName string) (*types.Week, error) {
+	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	return GetWeeklyGroupSchedule(groupName, nextWeekNum)
+}
+
+// GetWeeklyGroupScheduleImg returns the path to the image with the weekly schedule based on the selected school week.
+func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
+	schedule, err := GetWeeklyGroupSchedule(groupName, weekNum)
+	if err != nil {
+		return "", err
+	}
+
+	// loads an image of an empty table that will be filled in pairs
+	tableImg, _ := gg.LoadPNG(tableImgPath)
+	dc := gg.NewContextForImage(tableImg)
+
+	// writes the group name and the school week number
+	_ = dc.LoadFontFace(fontPath, headingTableFontSize)
+	dc.SetRGB255(25, 89, 209)
+	dc.DrawString(groupName, 575, 60)
+	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)
+
+	setDefaultSettings(dc)
+
+	currWeekNum, currWeekDayNum := getWeekAndWeekDayNumbers(0)
+
+	// goes through the row of each day of the week in the weekly schedule table
+	for row := 352; row < imgHeight; row += cellHeight {
+		// corresponds to the index of the day of the week and starts with 0
+		rowNum := row/cellHeight - 2
+
+		// coordinates of the beginning of the current row
+		x, y := float64(130), float64(row)
+
+		// if the row corresponds to the current day of the week, which is not Sunday
+		if rowNum == currWeekDayNum && currWeekDayNum != -1 && weekNum == currWeekNum {
+			highlightRow(row, dc)
+		}
+
+		for _, lessons := range schedule.Days[rowNum].Lessons {
+			if len(lessons.SubLessons) > 0 {
+				putLessonInTableCell(lessons.SubLessons, x, y, dc)
+			}
+			// moves on to the next lesson
+			x += cellWidth
+		}
+	}
+
+	weeklySchedulePath := fmt.Sprintf("assets/weekly_schedule%d.png", getRandInt())
+	return weeklySchedulePath, dc.SavePNG(weeklySchedulePath)
+}
+
+// highlightRow highlights the row in the table in blue.
+func highlightRow(row int, dc *gg.Context) {
+	dc.DrawRectangle(4, float64(row-cellHeight), imgWidth-4, cellHeight)
+	dc.SetRGBA255(25, 89, 209, 30)
+	dc.Fill()
+
+	setDefaultSettings(dc)
+}
+
+// setDefaultSettings sets the default drawing settings.
+func setDefaultSettings(dc *gg.Context) {
+	dc.Stroke()
+	dc.SetRGB255(0, 0, 0)
+	_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
+}
+
+// putLessonInTableCell draws information about the lesson in the corresponding cell of the weekly schedule table.
+func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc *gg.Context) {
+	// the number of lines into which the information about the lesson is divided
+	lessonPartsNum := 0
+	// information about the lesson to be placed in a table cell
+	lessonStr := ""
+	// a slice for the schedule of subgroups and different classes for one group
+	subLessonsStr := make([]string, len(subLessons))
+
+	for subLessonIdx := range subLessons {
+		if strings.Contains(subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Teacher) ||
+			strings.Contains(subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Room) {
+			continue
+		}
+
+		lessonTypeStr := getLessonTypeStr(subLessons[subLessonIdx].Type)
+
+		fLessonName := strings.Replace(subLessons[subLessonIdx].Name, ".", ". ", -1)
+		fLessonName = strings.Replace(fLessonName, "-", " – ", -1)
+		fLessonName = strings.Replace(fLessonName, ",", ", ", -1)
+
+		fRoom := strings.Replace(subLessons[subLessonIdx].Room, " ", "", -1)
+		fRoom = strings.Replace(fRoom, ".", "", -1)
+
+		subLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s", lessonTypeStr, fLessonName,
+			subLessons[subLessonIdx].Teacher, fRoom)
+
+		// removes duplicate names of the sublessons
+		if subLessonIdx > 0 {
+			if strings.Replace(subLessonsStr[0], "- ", "", -1) == subLessonInfo {
+				continue
+			}
+
+			if strings.Contains(subLessonsStr[0], fLessonName) {
+				isTeacherInInfo := false
+				for idx := 0; idx < subLessonIdx; idx++ {
+					if strings.Contains(subLessonsStr[idx], subLessons[subLessonIdx].Teacher) {
+						isTeacherInInfo = true
+						break
+					}
+				}
+				if !isTeacherInInfo {
+					subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
+						subLessons[subLessonIdx].Teacher, fRoom)
+				}
+			} else {
+				subLessonsStr[subLessonIdx] = subLessonInfo
+			}
+		} else {
+			subLessonsStr[subLessonIdx] = subLessonInfo
+		}
+
+		// divides the information about the lesson (consists of sublessons) into parts so that it fits into the cell
+		lessonParts := dc.WordWrap(strings.Join(subLessonsStr, " "), cellWidth-20)
+		lessonPartsNum = len(lessonParts)
+
+		// measures how wide the information about the lesson
+		lessonPartsWidth, _ := dc.MeasureMultilineString(strings.Join(lessonParts, "\n"),
+			1.7)
+
+		if lessonPartsWidth >= cellWidth {
+			fLessonName = formatLessonNameToFitIntoCell(fLessonName)
+			// removes duplicate names of the sublessons
+			if subLessonIdx > 0 && strings.Contains(subLessonsStr[0], fLessonName) {
+				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
+					subLessons[subLessonIdx].Teacher, fRoom)
+			} else {
+				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s %s, %s, аудитория %s", lessonTypeStr,
+					fLessonName, subLessons[subLessonIdx].Teacher, fRoom)
+			}
+		}
+	}
+
+	hasFontChanged := false
+	// reduces the font size if there are more parts with the lesson schedule than fit in the cell
+	if lessonPartsNum > 5 {
+		setFontSize(lessonPartsNum, dc)
+		hasFontChanged = true
+	}
+
+	for subLessonIdx, subLessonStr := range subLessonsStr {
+		if len(subLessonStr) > 0 {
+			lessonStr += subLessonStr
+			if subLessonIdx != len(subLessonsStr)-1 {
+				lessonStr += "; "
+			}
+		}
+	}
+
+	dc.DrawStringWrapped(lessonStr, cellX, cellY-143, 0, 0, cellWidth-20, 1.7, 1)
+
+	if hasFontChanged {
+		_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
+	}
+}
+
+// formatLessonNameToFitIntoCell changes the name of the lesson so that it fits the width of the table cell, and
+// returns the changed value.
+func formatLessonNameToFitIntoCell(lessonName string) string {
+	lessonNameParts := strings.Split(lessonName, " ")
+	for idx := range lessonNameParts {
+		line := lessonNameParts[idx]
+		runeCntInLine := utf8.RuneCountInString(line)
+		if runeCntInLine > 18 {
+			newCurrLine := ""
+			for runeCnt := 0; len(line) > 0; runeCnt++ {
+				r, size := utf8.DecodeRuneInString(line)
+				newCurrLine += fmt.Sprintf("%c", r)
+				if runeCnt == runeCntInLine/2 {
+					newCurrLine += "- "
+				}
+				line = line[size:]
+			}
+			lessonNameParts[idx] = newCurrLine
+		}
+	}
+	return strings.Join(lessonNameParts, " ")
+}
+
+// setFontSize sets the font size depending on the number of lesson parts (lines) in the table cell.
+func setFontSize(lessonPartsNum int, dc *gg.Context) {
+	switch {
+	case lessonPartsNum == 6:
+		_ = dc.LoadFontFace(fontPath, 16.5)
+	case lessonPartsNum == 7:
+		_ = dc.LoadFontFace(fontPath, 16)
+	case lessonPartsNum == 8:
+		_ = dc.LoadFontFace(fontPath, 15)
+	case lessonPartsNum == 9:
+		_ = dc.LoadFontFace(fontPath, 14)
+	case lessonPartsNum == 10:
+		_ = dc.LoadFontFace(fontPath, 13.5)
+	default:
+		_ = dc.LoadFontFace(fontPath, 12.5)
+	}
+}
+
+// GetWeeklyGroupSchedule returns *types.Week received from the full schedule based on the selected school week.
+func GetWeeklyGroupSchedule(groupName string, weekNum int) (*types.Week, error) {
+	if weekNum < 0 || weekNum > 1 {
+		return nil, errors.New("incorrect value of the week number: it can be either zero or one")
+	}
+
+	schedule, err := GetFullGroupSchedule(groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
+		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+	}
+	return &schedule.Weeks[weekNum], nil
+}
+
 // GetFullGroupSchedule returns the full group's schedule.
 func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	url, err := getGroupScheduleURL(groupName)
@@ -233,7 +492,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 			dayIdx := iDiv10 - 2
 			lessonIdx := iMod10 - 2
-			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName,
+				reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 		// second week lessons
 		if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
@@ -245,14 +505,16 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 				lessonIdx = iMod10 - 3
 				dayIdx = iDiv10 - 11
 			}
-			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName,
+				reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 	})
 	return groupSchedule, nil
 }
 
 // getGroupLessonFromTableCell returns *types.Lesson received from the HTML table cell.
-func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp, s *goquery.Selection) *types.Lesson {
+func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
+	s *goquery.Selection) *types.Lesson {
 	lesson := new(types.Lesson)
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
@@ -282,8 +544,8 @@ func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom, reFindT
 			} else {
 				if j == 0 {
 					subLessonTypeAndName := strings.Split(splitLessonInfoHTML[j], ".")
-					subLessonName = subLessonTypeAndName[1]
 					subLessonType = determineLessonType(subLessonTypeAndName[0])
+					subLessonName = strings.Join(subLessonTypeAndName[1:], ". ")
 				} else {
 					subLessonName = splitLessonInfoHTML[j]
 				}
