@@ -45,6 +45,19 @@ func determineLessonType(lessonType string) types.LessonType {
 	}
 }
 
+// TODO: перейти на использование метода String() LessonType и удалить этот метод (оставлен только для teachers.go)
+// getLessonTypeStr returns a string representation of types.LessonType.
+func getLessonTypeStr(lessonType types.LessonType) string {
+	switch lessonType {
+	case types.Lecture:
+		return "Лек."
+	case types.Practice:
+		return "Пр."
+	default:
+		return "Лаб."
+	}
+}
+
 // getWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
 func getWeekAndWeekDayNumbersByWeekDay(weekday string) (int, int) {
 	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
