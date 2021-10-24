@@ -179,10 +179,8 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 					-1)
 				formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
 
-				lessonTypeStr := getLessonTypeStr(dailySchedule.Lessons[lessonNum].SubLessons[0].Type)
-
-				result += fmt.Sprintf("%s %s, %s, аудитория %s", lessonTypeStr, formattedLesson,
-					dailySchedule.Lessons[lessonNum].SubLessons[0].Teacher, formattedRoom)
+				result += fmt.Sprintf("%s %s, %s, аудитория %s", dailySchedule.Lessons[lessonNum].SubLessons[0].Type,
+					formattedLesson, dailySchedule.Lessons[lessonNum].SubLessons[0].Teacher, formattedRoom)
 			} else {
 				var subgroupsLessonsOnCurrLesson string
 				for _, subgroupLesson := range dailySchedule.Lessons[lessonNum].SubLessons {
@@ -196,9 +194,7 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 					formattedRoom := strings.Replace(subgroupLesson.Room, " ", "", -1)
 					formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
 
-					subgroupLessonTypeStr := getLessonTypeStr(subgroupLesson.Type)
-
-					subgroupLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s; ", subgroupLessonTypeStr,
+					subgroupLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s; ", subgroupLesson.Type,
 						formattedLesson, subgroupLesson.Teacher, formattedRoom)
 
 					if !strings.Contains(subgroupsLessonsOnCurrLesson, subgroupLessonInfo) {
@@ -327,8 +323,6 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 			continue
 		}
 
-		lessonTypeStr := getLessonTypeStr(subLessons[subLessonIdx].Type)
-
 		fLessonName := strings.Replace(subLessons[subLessonIdx].Name, ".", ". ", -1)
 		fLessonName = strings.Replace(fLessonName, "-", " – ", -1)
 		fLessonName = strings.Replace(fLessonName, ",", ", ", -1)
@@ -336,7 +330,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 		fRoom := strings.Replace(subLessons[subLessonIdx].Room, " ", "", -1)
 		fRoom = strings.Replace(fRoom, ".", "", -1)
 
-		subLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s", lessonTypeStr, fLessonName,
+		subLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type, fLessonName,
 			subLessons[subLessonIdx].Teacher, fRoom)
 
 		// removes duplicate names of the sublessons
@@ -379,7 +373,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
 					subLessons[subLessonIdx].Teacher, fRoom)
 			} else {
-				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s %s, %s, аудитория %s", lessonTypeStr,
+				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type,
 					fLessonName, subLessons[subLessonIdx].Teacher, fRoom)
 			}
 		}

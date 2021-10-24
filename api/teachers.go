@@ -203,7 +203,7 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 			lessonTime := lessonsTime[lessonIndex]
 			lessonType := subLessons[0].Type
 			lessonName := subLessons[0].Name
-			lessonTypeWithName := fmt.Sprintf("%s %s", getLessonTypeStr(lessonType), lessonName)
+			lessonTypeWithName := fmt.Sprintf("%s %s", lessonType, lessonName)
 			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
 			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
 
