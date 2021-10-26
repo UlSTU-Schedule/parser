@@ -4,12 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
 	"strings"
 	"time"
 )
 
-const teacherScheduleURL = "https://old.ulstu.ru/schedule/teachers/%s"
+const (
+	teacherScheduleURL   = "https://old.ulstu.ru/schedule/teachers/%s"
+	tableTeacherImgPath  = "assets/weekly_schedule_teacher_template.png"
+)
 
 // GetTextDailyTeacherScheduleByDate returns a text representation of the daily schedule based on the the string
 // representation of the date.
@@ -58,6 +62,7 @@ func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error)
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
+
 
 // GetTextDailyTeacherScheduleByWeekDay returns a text representation of the daily schedule based on the selected day of
 // the current week.
@@ -123,6 +128,120 @@ func GetDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day,
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
+// GetCurrWeekTeacherScheduleImg return img of current weekly schedule
+func GetCurrWeekTeacherScheduleImg(teacherName string) (string, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	return GetWeeklyTeacherScheduleImg(teacherName, currWeekNum)
+}
+
+// GetNextWeekTeacherScheduleImg return img of next weekly schedule
+func GetNextWeekTeacherScheduleImg(teacherName string) (string, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	return GetWeeklyTeacherScheduleImg(teacherName, currWeekNum)
+}
+
+// GetCurrWeekTeacherSchedule return object of current weekly schedule
+func GetCurrWeekTeacherSchedule(teacherName string) (*types.Week, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	return GetWeeklyTeacherSchedule(teacherName, currWeekNum)
+}
+
+// GetNextWeekTeacherSchedule return object of next weekly schedule
+func GetNextWeekTeacherSchedule(teacherName string) (*types.Week, error) {
+	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	return GetWeeklyTeacherSchedule(teacherName, nextWeekNum)
+}
+
+// GetWeeklyTeacherSchedule return object of weekly schedule
+func GetWeeklyTeacherSchedule(teacherName string, weekNum int)  (*types.Week, error) {
+	schedule, err := GetFullTeacherSchedule(teacherName)
+	if err != nil {
+		return nil, err
+	}
+	return &schedule.Weeks[weekNum], nil
+}
+
+// GetWeeklyTeacherScheduleImg return path on img of schedule
+func GetWeeklyTeacherScheduleImg(teacherName string, weekNum int) (string, error) {
+	scheduleWeekly, err := GetWeeklyTeacherSchedule(teacherName, weekNum)
+	if err != nil {
+		return "", err
+	}
+
+	tableImg, _ := gg.LoadPNG(tableTeacherImgPath)
+	dc := gg.NewContextForImage(tableImg)
+
+
+	_ = dc.LoadFontFace(fontPath, headingTableFontSize)
+	dc.SetRGB255(25, 89, 209)
+	dc.DrawString(teacherName, 500, 60)
+	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)
+
+	setDefaultSettings(dc)
+
+	currWeekNum, currWeekDayNum := getWeekAndWeekDayNumbers(0)
+
+	for row := 352; row < imgHeight; row += cellHeight {
+		rowNum := row/cellHeight - 2
+
+		x, y := float64(130), float64(row)
+
+		if rowNum == currWeekDayNum && currWeekDayNum != -1 && currWeekNum == weekNum {
+			highlightRow(row, dc)
+		}
+		scheduleDay := scheduleWeekly.Days[rowNum]
+
+		for _, lesson := range scheduleDay.Lessons {
+			if len(lesson.SubLessons) > 0 {
+				drawLessonForWeeklySchedule(&lesson, dc, x, y)
+			}
+			// переходит к следующей паре
+			x += cellWidth
+		}
+	}
+	dc.Stroke()
+	weeklySchedulePath := fmt.Sprintf("assets/weekly_schedule%d.png", getRandInt())
+	return weeklySchedulePath, dc.SavePNG(weeklySchedulePath)
+}
+
+// drawLessonForWeeklySchedule - rendering schedule of lesson
+func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y float64)  {
+	subLessons := lesson.SubLessons
+	groups := ""
+	for indexSubLesson, subLesson := range subLessons {
+		if indexSubLesson != len(subLessons)-1 {
+			groups += fmt.Sprintf("%s, ", subLesson.Group)
+		} else {
+			groups += fmt.Sprintf("%s", subLesson.Group)
+		}
+	}
+
+	formattedLesson := strings.Replace(subLessons[0].Name, ".", ". ", -1)
+	formattedLesson = strings.Replace(formattedLesson, "-", " - ", -1)
+	formattedLesson = strings.Replace(formattedLesson, ",", ", ", -1)
+
+	formattedRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
+	formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
+
+	infoAboutLesson := fmt.Sprintf("%s \n%s \nаудитория %s", groups, formattedLesson, formattedRoom)
+
+	wrappedInfoStr := dc.WordWrap(infoAboutLesson, cellWidth-20)
+
+	hasFontChanged := false
+
+	linesInLessonStr := len(wrappedInfoStr)
+	if linesInLessonStr >= 6 {
+		setFontSize(linesInLessonStr, dc)
+		hasFontChanged = true
+	}
+
+	dc.DrawStringWrapped(infoAboutLesson, x, y-143, 0, 0, cellWidth-20, 1.7, 1)
+
+	if hasFontChanged {
+		_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
+		hasFontChanged = false
+	}
+}
 // GetFullTeacherSchedule returns the full teacher's schedule.
 func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	teacherURL, err := getTeacherURL(teacher)
