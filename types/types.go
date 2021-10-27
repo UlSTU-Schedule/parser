@@ -33,7 +33,7 @@ func (lt LessonType) String() string {
 	return [...]string{"Лек.", "Лаб.", "Пр."}[lt]
 }
 
-// Duration ...
+// Duration represents the lesson's duration.
 type Duration int
 
 func (d Duration) String() string {
