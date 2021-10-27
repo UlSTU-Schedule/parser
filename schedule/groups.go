@@ -158,7 +158,7 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 		if len(dailySchedule.Lessons[lessonNum].SubLessons) > 0 {
 			noLessons = false
 
-			result += fmt.Sprintf("%d-ая пара (%s): ", lessonNum+1, lessonsTime[lessonNum])
+			result += fmt.Sprintf("%d-ая пара (%s): ", lessonNum+1, dailySchedule.Lessons[lessonNum].SubLessons[0].Duration)
 
 			if len(dailySchedule.Lessons[lessonNum].SubLessons) == 1 {
 				formattedLesson := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Name, ",",
@@ -441,7 +441,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 			dayIdx := iDiv10 - 2
 			lessonIdx := iMod10 - 2
-			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName,
+			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
 				reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 		// second week lessons
@@ -454,7 +454,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 				lessonIdx = iMod10 - 3
 				dayIdx = iDiv10 - 11
 			}
-			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName,
+			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
 				reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 		}
 	})
@@ -462,7 +462,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 }
 
 // getGroupLessonFromTableCell returns *types.Lesson received from the HTML table cell.
-func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
+func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
 	s *goquery.Selection) *types.Lesson {
 	lesson := new(types.Lesson)
 	tableCellHTML, _ := s.Find("font").Html()
@@ -483,11 +483,12 @@ func getGroupLessonFromTableCell(groupName string, reFindTeacherAndRoom, reFindT
 			// if the row contains teacher and room
 			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
 				subLesson := types.SubLesson{
-					Type:    subLessonType,
-					Group:   groupName,
-					Name:    subLessonName,
-					Teacher: reFindTeacher.FindString(splitLessonInfoHTML[j]),
-					Room:    reFindRoom.FindString(splitLessonInfoHTML[j]),
+					Duration: types.Duration(lessonIdx),
+					Type:     subLessonType,
+					Group:    groupName,
+					Name:     subLessonName,
+					Teacher:  reFindTeacher.FindString(splitLessonInfoHTML[j]),
+					Room:     reFindRoom.FindString(splitLessonInfoHTML[j]),
 				}
 				lesson.SubLessons = append(lesson.SubLessons, subLesson)
 			} else {

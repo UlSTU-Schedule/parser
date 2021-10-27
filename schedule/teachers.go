@@ -260,7 +260,7 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 		if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
 			dayIdx := i/10 - 2
 			lessonIdx := i%10 - 2
-			teacherSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, s)
+			teacherSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
 		}
 		// second week lessons
 		if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
@@ -275,7 +275,7 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 			} else {
 				dayIdx = (i/10)%10 - 1
 			}
-			teacherSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, s)
+			teacherSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
 		}
 	})
 	return teacherSchedule, nil
@@ -318,7 +318,6 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 			}
 
 			lessonNumber := lessonIndex + 1
-			lessonTime := lessonsTime[lessonIndex]
 			lessonType := subLessons[0].Type
 			lessonName := subLessons[0].Name
 			lessonTypeWithName := fmt.Sprintf("%s %s", lessonType, lessonName)
@@ -327,10 +326,10 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 
 			if len(strings.Split(groups, ",")) > 1 {
 				result += fmt.Sprintf("%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
-					lessonNumber, lessonTime, lessonTypeWithName, lessonRoom, groups)
+					lessonNumber, subLessons[0].Duration, lessonTypeWithName, lessonRoom, groups)
 			} else {
 				result += fmt.Sprintf("%d-ая пара (%s): %s, %s, аудитория %s\n\n",
-					lessonNumber, lessonTime, lessonTypeWithName, groups, lessonRoom)
+					lessonNumber, subLessons[0].Duration, lessonTypeWithName, groups, lessonRoom)
 			}
 		}
 	}
@@ -350,7 +349,7 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 }
 
 // getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
-func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson {
+func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection) *types.Lesson {
 	lesson := new(types.Lesson)
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
@@ -364,11 +363,12 @@ func getTeacherLessonFromDoc(teacher string, s *goquery.Selection) *types.Lesson
 		lessonName := strings.TrimSpace(lessonTypeAndName[len(lessonTypeAndName)-1])
 		for _, groupName := range lessonGroups {
 			groupLesson := types.SubLesson{
-				Type:    lessonType,
-				Group:   groupName,
-				Name:    lessonName,
-				Teacher: teacher,
-				Room:    splitLessonInfoHTML[2],
+				Duration: types.Duration(lessonIdx),
+				Type:     lessonType,
+				Group:    groupName,
+				Name:     lessonName,
+				Teacher:  teacher,
+				Room:     splitLessonInfoHTML[2],
 			}
 			lesson.SubLessons = append(lesson.SubLessons, groupLesson)
 		}
