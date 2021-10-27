@@ -7,6 +7,7 @@ import (
 	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -433,31 +434,53 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	reFindTeacher := regexp.MustCompile(findTeacherRegexp)
 	reFindRoom := regexp.MustCompile(findRoomRegexp)
 
-	doc.Find("p").Each(func(i int, s *goquery.Selection) {
-		iMod10 := i % 10
-		iDiv10 := i / 10
+	pSelection := doc.Find("p")
 
-		// first week lessons
-		if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
-			dayIdx := iDiv10 - 2
-			lessonIdx := iMod10 - 2
-			groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
-				reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
-		}
-		// second week lessons
-		if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
-			var lessonIdx, dayIdx int
-			if iMod10 == 0 {
-				lessonIdx = 7
-				dayIdx = iDiv10 - 12
-			} else {
-				lessonIdx = iMod10 - 3
-				dayIdx = iDiv10 - 11
+	// we have schedule of two weeks
+	if pSelection.Length() == 182 {
+		pSelection.Each(func(i int, s *goquery.Selection) {
+			iMod10 := i % 10
+			iDiv10 := i / 10
+
+			// first week lessons
+			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
+				dayIdx := iDiv10 - 2
+				lessonIdx := iMod10 - 2
+				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
+					reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
 			}
-			groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
-				reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
-		}
-	})
+			// second week lessons
+			if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
+				var lessonIdx, dayIdx int
+				if iMod10 == 0 {
+					lessonIdx = 7
+					dayIdx = iDiv10 - 12
+				} else {
+					lessonIdx = iMod10 - 3
+					dayIdx = iDiv10 - 11
+				}
+				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
+					reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			}
+		})
+	} else {
+		// we have one school week schedule
+		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
+		weekNum, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
+
+		pSelection.Each(func(i int, s *goquery.Selection) {
+			iMod10 := i % 10
+			iDiv10 := i / 10
+
+			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
+				dayIdx := iDiv10 - 2
+				lessonIdx := iMod10 - 2
+				groupSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
+					reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+			}
+		})
+
+	}
 	return groupSchedule, nil
 }
 
