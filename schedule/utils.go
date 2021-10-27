@@ -1,4 +1,4 @@
-package api
+package schedule
 
 import (
 	"fmt"
@@ -19,14 +19,15 @@ const (
 	imgWidth  = 1722
 	imgHeight = 1104
 
-	fontPath     = "assets/Arial.ttf"
+	fontPath = "assets/Arial.ttf"
 
-	headingTableFontSize = 42
+	headingTableFontSize    = 42
 	defaultScheduleFontSize = 19
 
 	cellWidth  = 200
 	cellHeight = 150
 )
+
 // getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
 	response, err := http.Get(URL)
@@ -55,19 +56,6 @@ func determineLessonType(lessonType string) types.LessonType {
 		return types.Practice
 	default:
 		return types.Laboratory
-	}
-}
-
-// TODO: перейти на использование метода String() LessonType и удалить этот метод (оставлен только для teachers.go)
-// getLessonTypeStr returns a string representation of types.LessonType.
-func getLessonTypeStr(lessonType types.LessonType) string {
-	switch lessonType {
-	case types.Lecture:
-		return "Лек."
-	case types.Practice:
-		return "Пр."
-	default:
-		return "Лаб."
 	}
 }
 

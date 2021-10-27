@@ -1,4 +1,4 @@
-package api
+package schedule
 
 import (
 	"errors"
@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	teacherScheduleURL   = "https://old.ulstu.ru/schedule/teachers/%s"
-	tableTeacherImgPath  = "assets/weekly_schedule_teacher_template.png"
+	teacherScheduleURL  = "https://old.ulstu.ru/schedule/teachers/%s"
+	tableTeacherImgPath = "assets/weekly_schedule_teacher_template.png"
 )
 
 // GetTextDailyTeacherScheduleByDate returns a text representation of the daily schedule based on the the string
@@ -62,7 +62,6 @@ func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error)
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
-
 
 // GetTextDailyTeacherScheduleByWeekDay returns a text representation of the daily schedule based on the selected day of
 // the current week.
@@ -153,7 +152,7 @@ func GetNextWeekTeacherSchedule(teacherName string) (*types.Week, error) {
 }
 
 // GetWeeklyTeacherSchedule return object of weekly schedule
-func GetWeeklyTeacherSchedule(teacherName string, weekNum int)  (*types.Week, error) {
+func GetWeeklyTeacherSchedule(teacherName string, weekNum int) (*types.Week, error) {
 	schedule, err := GetFullTeacherSchedule(teacherName)
 	if err != nil {
 		return nil, err
@@ -170,7 +169,6 @@ func GetWeeklyTeacherScheduleImg(teacherName string, weekNum int) (string, error
 
 	tableImg, _ := gg.LoadPNG(tableTeacherImgPath)
 	dc := gg.NewContextForImage(tableImg)
-
 
 	_ = dc.LoadFontFace(fontPath, headingTableFontSize)
 	dc.SetRGB255(25, 89, 209)
@@ -205,7 +203,7 @@ func GetWeeklyTeacherScheduleImg(teacherName string, weekNum int) (string, error
 }
 
 // drawLessonForWeeklySchedule - rendering schedule of lesson
-func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y float64)  {
+func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y float64) {
 	subLessons := lesson.SubLessons
 	groups := ""
 	for indexSubLesson, subLesson := range subLessons {
@@ -242,6 +240,7 @@ func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y floa
 		hasFontChanged = false
 	}
 }
+
 // GetFullTeacherSchedule returns the full teacher's schedule.
 func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	teacherURL, err := getTeacherURL(teacher)
@@ -322,7 +321,7 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 			lessonTime := lessonsTime[lessonIndex]
 			lessonType := subLessons[0].Type
 			lessonName := subLessons[0].Name
-			lessonTypeWithName := fmt.Sprintf("%s %s", getLessonTypeStr(lessonType), lessonName)
+			lessonTypeWithName := fmt.Sprintf("%s %s", lessonType, lessonName)
 			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
 			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
 

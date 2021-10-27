@@ -1,4 +1,4 @@
-package api
+package schedule
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ const (
 	groupScheduleURLTemplate = "https://old.ulstu.ru/schedule/students/part%d/%s"
 	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
-	tableImgGroupPath = "assets/weekly_schedule_group_template.png"
+	tableImgGroupPath        = "assets/weekly_schedule_group_template.png"
 )
 
 // GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
