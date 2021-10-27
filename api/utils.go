@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
 	"golang.org/x/text/encoding/charmap"
 	"math/rand"
@@ -14,6 +15,18 @@ import (
 
 var lessonsTime = [8]string{"08:30-09:50", "10:00-11:20", "11:30-12:50", "13:30-14:50", "15:00-16:20", "16:30-17:50", "18:00-19:20", "19:30-20:50"}
 
+const (
+	imgWidth  = 1722
+	imgHeight = 1104
+
+	fontPath     = "assets/Arial.ttf"
+
+	headingTableFontSize = 42
+	defaultScheduleFontSize = 19
+
+	cellWidth  = 200
+	cellHeight = 150
+)
 // getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
 	response, err := http.Get(URL)
@@ -209,4 +222,38 @@ func isWeeklyScheduleEmpty(week types.Week) bool {
 func getRandInt() int {
 	rand.Seed(time.Now().UTC().UnixNano())
 	return rand.Int()
+}
+
+// setDefaultSettings sets the default drawing settings.
+func setDefaultSettings(dc *gg.Context) {
+	dc.Stroke()
+	dc.SetRGB255(0, 0, 0)
+	_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
+}
+
+// highlightRow highlights the row in the table in blue.
+func highlightRow(row int, dc *gg.Context) {
+	dc.DrawRectangle(4, float64(row-cellHeight), imgWidth-4, cellHeight)
+	dc.SetRGBA255(25, 89, 209, 30)
+	dc.Fill()
+
+	setDefaultSettings(dc)
+}
+
+// setFontSize sets the font size depending on the number of lesson parts (lines) in the table cell.
+func setFontSize(lessonPartsNum int, dc *gg.Context) {
+	switch {
+	case lessonPartsNum == 6:
+		_ = dc.LoadFontFace(fontPath, 16.5)
+	case lessonPartsNum == 7:
+		_ = dc.LoadFontFace(fontPath, 16)
+	case lessonPartsNum == 8:
+		_ = dc.LoadFontFace(fontPath, 15)
+	case lessonPartsNum == 9:
+		_ = dc.LoadFontFace(fontPath, 14)
+	case lessonPartsNum == 10:
+		_ = dc.LoadFontFace(fontPath, 13.5)
+	default:
+		_ = dc.LoadFontFace(fontPath, 12.5)
+	}
 }

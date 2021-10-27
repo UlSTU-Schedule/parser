@@ -16,18 +16,7 @@ const (
 	groupScheduleURLTemplate = "https://old.ulstu.ru/schedule/students/part%d/%s"
 	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
-
-	imgWidth  = 1722
-	imgHeight = 1104
-
-	tableImgPath = "assets/weekly_schedule_template.png"
-	fontPath     = "assets/Arial.ttf"
-
-	headingTableFontSize    = 42
-	defaultScheduleFontSize = 19
-
-	cellWidth  = 200
-	cellHeight = 150
+	tableImgGroupPath = "assets/weekly_schedule_group_template.png"
 )
 
 // GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
@@ -253,7 +242,7 @@ func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
 	}
 
 	// loads an image of an empty table that will be filled in pairs
-	tableImg, _ := gg.LoadPNG(tableImgPath)
+	tableImg, _ := gg.LoadPNG(tableImgGroupPath)
 	dc := gg.NewContextForImage(tableImg)
 
 	// writes the group name and the school week number
@@ -290,22 +279,6 @@ func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
 
 	weeklySchedulePath := fmt.Sprintf("assets/weekly_schedule%d.png", getRandInt())
 	return weeklySchedulePath, dc.SavePNG(weeklySchedulePath)
-}
-
-// highlightRow highlights the row in the table in blue.
-func highlightRow(row int, dc *gg.Context) {
-	dc.DrawRectangle(4, float64(row-cellHeight), imgWidth-4, cellHeight)
-	dc.SetRGBA255(25, 89, 209, 30)
-	dc.Fill()
-
-	setDefaultSettings(dc)
-}
-
-// setDefaultSettings sets the default drawing settings.
-func setDefaultSettings(dc *gg.Context) {
-	dc.Stroke()
-	dc.SetRGB255(0, 0, 0)
-	_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
 }
 
 // putLessonInTableCell draws information about the lesson in the corresponding cell of the weekly schedule table.
@@ -423,24 +396,6 @@ func formatLessonNameToFitIntoCell(lessonName string) string {
 		}
 	}
 	return strings.Join(lessonNameParts, " ")
-}
-
-// setFontSize sets the font size depending on the number of lesson parts (lines) in the table cell.
-func setFontSize(lessonPartsNum int, dc *gg.Context) {
-	switch {
-	case lessonPartsNum == 6:
-		_ = dc.LoadFontFace(fontPath, 16.5)
-	case lessonPartsNum == 7:
-		_ = dc.LoadFontFace(fontPath, 16)
-	case lessonPartsNum == 8:
-		_ = dc.LoadFontFace(fontPath, 15)
-	case lessonPartsNum == 9:
-		_ = dc.LoadFontFace(fontPath, 14)
-	case lessonPartsNum == 10:
-		_ = dc.LoadFontFace(fontPath, 13.5)
-	default:
-		_ = dc.LoadFontFace(fontPath, 12.5)
-	}
 }
 
 // GetWeeklyGroupSchedule returns *types.Week received from the full schedule based on the selected school week.
