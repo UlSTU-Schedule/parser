@@ -91,10 +91,3 @@ func (sl SubLesson) String() string {
 		return fmt.Sprintf("%s %s, аудитория %s", sl.Type, sl.Name, sl.Room)
 	}
 }
-
-// Faculty represents the faculty.
-type Faculty struct {
-	Name   string
-	ID     int
-	Groups []string
-}
