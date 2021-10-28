@@ -27,8 +27,8 @@ type Lesson struct {
 
 // String returns a string representation of Lesson.
 func (l Lesson) String() string {
-	var lessonBuilder strings.Builder
 	if l.SubLessons != nil {
+		var lessonBuilder strings.Builder
 		_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
 			int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
 
@@ -49,8 +49,9 @@ func (l Lesson) String() string {
 			lessonBuilder.WriteString(strings.TrimSuffix(subLessonsBuilder.String(), "; "))
 		}
 		lessonBuilder.WriteString("\n\n")
+		return lessonBuilder.String()
 	}
-	return lessonBuilder.String()
+	return ""
 }
 
 // LessonType is the type of the lesson. Can take 3 values: Lecture, Laboratory and Practice.
