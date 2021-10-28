@@ -296,8 +296,8 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
 					subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 			} else {
-				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type,
-					fLessonName, subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
+				subLessons[subLessonIdx].Name = fLessonName
+				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].String()
 			}
 		}
 	}
