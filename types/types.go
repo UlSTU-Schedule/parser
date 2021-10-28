@@ -85,7 +85,11 @@ type SubLesson struct {
 
 // String returns a string representation of SubLesson.
 func (sl SubLesson) String() string {
-	return fmt.Sprintf("%s %s, %s, аудитория %s", sl.Type, sl.Name, sl.Teacher, sl.Room)
+	if sl.Teacher != "" {
+		return fmt.Sprintf("%s %s, %s, аудитория %s", sl.Type, sl.Name, sl.Teacher, sl.Room)
+	} else {
+		return fmt.Sprintf("%s %s, аудитория %s", sl.Type, sl.Name, sl.Room)
+	}
 }
 
 // Faculty represents the faculty.

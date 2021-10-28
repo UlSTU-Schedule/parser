@@ -15,7 +15,7 @@ import (
 
 const (
 	groupScheduleURLTemplate = "https://old.ulstu.ru/schedule/students/part%d/%s"
-	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
+	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
 	tableImgGroupPath        = "assets/weekly_schedule_group_template.png"
 )
@@ -256,20 +256,13 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 	subLessonsStr := make([]string, len(subLessons))
 
 	for subLessonIdx := range subLessons {
-		if strings.Contains(subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Teacher) ||
+		if strings.Contains(subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Teacher) && subLessons[subLessonIdx].Teacher != "" ||
 			strings.Contains(subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Room) {
 			continue
 		}
 
-		subLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type,
-			subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
-
 		// removes duplicate names of the sublessons
 		if subLessonIdx > 0 {
-			if strings.Replace(subLessonsStr[0], "- ", "", -1) == subLessonInfo {
-				continue
-			}
-
 			if strings.Contains(subLessonsStr[0], subLessons[subLessonIdx].Name) {
 				isTeacherInInfo := false
 				for idx := 0; idx < subLessonIdx; idx++ {
@@ -283,10 +276,10 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 						subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 				}
 			} else {
-				subLessonsStr[subLessonIdx] = subLessonInfo
+				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].String()
 			}
 		} else {
-			subLessonsStr[subLessonIdx] = subLessonInfo
+			subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].String()
 		}
 
 		// divides the information about the lesson (consists of sublessons) into parts so that it fits into the cell
@@ -294,8 +287,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 		lessonPartsNum = len(lessonParts)
 
 		// measures how wide the information about the lesson
-		lessonPartsWidth, _ := dc.MeasureMultilineString(strings.Join(lessonParts, "\n"),
-			1.7)
+		lessonPartsWidth, _ := dc.MeasureMultilineString(strings.Join(lessonParts, "\n"), 1.7)
 
 		if lessonPartsWidth >= cellWidth {
 			fLessonName := formatLessonNameToFitIntoCell(subLessons[subLessonIdx].Name)
@@ -461,11 +453,11 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 		// if <br/> doesn't separate anything, so we do not take it into account
 		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
 			// if the row contains teacher and room
-			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
+			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) && j != 0 {
 				room := reFindRoom.FindString(splitLessonInfoHTML[j])
 
 				// remove extra characters from the room
-				r := strings.NewReplacer(" ", "", ".", "", "_", "-")
+				r := strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
 
 				lesson.SubLessons = append(lesson.SubLessons, types.SubLesson{
 					Duration: types.Duration(lessonIdx),
@@ -477,12 +469,12 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 				})
 			} else {
 				// add spaces next to special characters (so that there are more hyphenation options when drawing)
-				r := strings.NewReplacer(",", ", ", ".", ". ", "-", " - ")
+				r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
 
 				if j == 0 {
 					subLessonTypeAndName := strings.Split(splitLessonInfoHTML[j], ".")
 					subLessonType = determineLessonType(subLessonTypeAndName[0])
-					subLessonName = r.Replace(subLessonTypeAndName[1])
+					subLessonName = r.Replace(strings.Join(subLessonTypeAndName[1:], "."))
 				} else {
 					subLessonName = r.Replace(splitLessonInfoHTML[j])
 				}
