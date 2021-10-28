@@ -28,26 +28,28 @@ type Lesson struct {
 // String returns a string representation of Lesson.
 func (l Lesson) String() string {
 	var lessonBuilder strings.Builder
-	_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
-		int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
+	if len(l.SubLessons) > 0 {
+		_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
+			int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
 
-	if len(l.SubLessons) == 1 {
-		lessonBuilder.WriteString(l.SubLessons[0].String())
-	} else {
-		var subLessonsBuilder strings.Builder
-		for _, subLesson := range l.SubLessons {
-			if strings.Contains(subLesson.Name, subLesson.Teacher) || strings.Contains(subLesson.Name, subLesson.Room) {
-				continue
-			}
+		if len(l.SubLessons) == 1 {
+			lessonBuilder.WriteString(l.SubLessons[0].String())
+		} else {
+			var subLessonsBuilder strings.Builder
+			for _, subLesson := range l.SubLessons {
+				if strings.Contains(subLesson.Name, subLesson.Teacher) || strings.Contains(subLesson.Name, subLesson.Room) {
+					continue
+				}
 
-			subgroupLessonInfo := fmt.Sprintf("%s; ", subLesson.String())
-			if !strings.Contains(subLessonsBuilder.String(), subgroupLessonInfo) {
-				subLessonsBuilder.WriteString(subgroupLessonInfo)
+				subgroupLessonInfo := fmt.Sprintf("%s; ", subLesson.String())
+				if !strings.Contains(subLessonsBuilder.String(), subgroupLessonInfo) {
+					subLessonsBuilder.WriteString(subgroupLessonInfo)
+				}
 			}
+			lessonBuilder.WriteString(strings.TrimSuffix(subLessonsBuilder.String(), "; "))
 		}
-		lessonBuilder.WriteString(strings.TrimSuffix(subLessonsBuilder.String(), "; "))
+		lessonBuilder.WriteString("\n\n")
 	}
-	lessonBuilder.WriteString("\n\n")
 	return lessonBuilder.String()
 }
 
