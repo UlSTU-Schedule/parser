@@ -135,7 +135,7 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 
 // convertDailyGroupScheduleToText converts the information that *types.Day contains into text.
 func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day, daysAfterCurr int) string {
-	result := ""
+	var b strings.Builder
 
 	dateStr := getDateStr(daysAfterCurr)
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
@@ -143,72 +143,36 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 
 	switch daysAfterCurr {
 	case 0:
-		result = fmt.Sprintf("Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
+		_, _ = fmt.Fprintf(&b, "Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
 			weekDay, dateStr, weekNum+1)
 	case 1:
-		result = fmt.Sprintf("Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
+		_, _ = fmt.Fprintf(&b, "Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
 			weekDay, dateStr, weekNum+1)
 	default:
-		result = fmt.Sprintf("Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
+		_, _ = fmt.Fprintf(&b, "Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
 			dateStr, weekDay, weekNum+1)
 	}
 
 	noLessons := true
-
 	for lessonNum := 0; lessonNum < len(dailySchedule.Lessons); lessonNum++ {
 		if len(dailySchedule.Lessons[lessonNum].SubLessons) > 0 {
 			noLessons = false
-
-			result += fmt.Sprintf("%d-ая пара (%s): ", lessonNum+1, dailySchedule.Lessons[lessonNum].SubLessons[0].Duration)
-
-			if len(dailySchedule.Lessons[lessonNum].SubLessons) == 1 {
-				formattedLesson := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Name, ",",
-					", ", -1)
-
-				formattedRoom := strings.Replace(dailySchedule.Lessons[lessonNum].SubLessons[0].Room, " ", "",
-					-1)
-				formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
-
-				result += fmt.Sprintf("%s %s, %s, аудитория %s", dailySchedule.Lessons[lessonNum].SubLessons[0].Type,
-					formattedLesson, dailySchedule.Lessons[lessonNum].SubLessons[0].Teacher, formattedRoom)
-			} else {
-				var subgroupsLessonsOnCurrLesson string
-				for _, subgroupLesson := range dailySchedule.Lessons[lessonNum].SubLessons {
-					if strings.Contains(subgroupLesson.Name, subgroupLesson.Teacher) ||
-						strings.Contains(subgroupLesson.Name, subgroupLesson.Room) {
-						continue
-					}
-
-					formattedLesson := strings.Replace(subgroupLesson.Name, ",", ", ", -1)
-
-					formattedRoom := strings.Replace(subgroupLesson.Room, " ", "", -1)
-					formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
-
-					subgroupLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s; ", subgroupLesson.Type,
-						formattedLesson, subgroupLesson.Teacher, formattedRoom)
-
-					if !strings.Contains(subgroupsLessonsOnCurrLesson, subgroupLessonInfo) {
-						subgroupsLessonsOnCurrLesson += subgroupLessonInfo
-					}
-				}
-				result += strings.TrimSuffix(subgroupsLessonsOnCurrLesson, "; ")
-			}
-			result += "\n\n"
+			b.WriteString(dailySchedule.Lessons[lessonNum].String())
 		}
 	}
 
 	if noLessons {
 		switch daysAfterCurr {
 		case 0:
-			result += "Сегодня пар нет"
+			b.WriteString("Сегодня пар нет")
 		case 1:
-			result += "Завтра пар нет"
+			b.WriteString("Завтра пар нет")
 		default:
-			result += fmt.Sprintf("%s пар нет", dateStr)
+			_, _ = fmt.Fprintf(&b, "%s пар нет", dateStr)
 		}
 	}
 
-	return result
+	return b.String()
 }
 
 // GetCurrWeekGroupScheduleImg returns the path to the image with the weekly schedule based on the current school week.
@@ -287,7 +251,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 	// the number of lines into which the information about the lesson is divided
 	lessonPartsNum := 0
 	// information about the lesson to be placed in a table cell
-	lessonStr := ""
+	var lessonBuilder strings.Builder
 	// a slice for the schedule of subgroups and different classes for one group
 	subLessonsStr := make([]string, len(subLessons))
 
@@ -297,15 +261,8 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 			continue
 		}
 
-		fLessonName := strings.Replace(subLessons[subLessonIdx].Name, ".", ". ", -1)
-		fLessonName = strings.Replace(fLessonName, "-", " – ", -1)
-		fLessonName = strings.Replace(fLessonName, ",", ", ", -1)
-
-		fRoom := strings.Replace(subLessons[subLessonIdx].Room, " ", "", -1)
-		fRoom = strings.Replace(fRoom, ".", "", -1)
-
-		subLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type, fLessonName,
-			subLessons[subLessonIdx].Teacher, fRoom)
+		subLessonInfo := fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type,
+			subLessons[subLessonIdx].Name, subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 
 		// removes duplicate names of the sublessons
 		if subLessonIdx > 0 {
@@ -313,7 +270,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 				continue
 			}
 
-			if strings.Contains(subLessonsStr[0], fLessonName) {
+			if strings.Contains(subLessonsStr[0], subLessons[subLessonIdx].Name) {
 				isTeacherInInfo := false
 				for idx := 0; idx < subLessonIdx; idx++ {
 					if strings.Contains(subLessonsStr[idx], subLessons[subLessonIdx].Teacher) {
@@ -323,7 +280,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 				}
 				if !isTeacherInInfo {
 					subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
-						subLessons[subLessonIdx].Teacher, fRoom)
+						subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 				}
 			} else {
 				subLessonsStr[subLessonIdx] = subLessonInfo
@@ -341,14 +298,14 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 			1.7)
 
 		if lessonPartsWidth >= cellWidth {
-			fLessonName = formatLessonNameToFitIntoCell(fLessonName)
+			fLessonName := formatLessonNameToFitIntoCell(subLessons[subLessonIdx].Name)
 			// removes duplicate names of the sublessons
 			if subLessonIdx > 0 && strings.Contains(subLessonsStr[0], fLessonName) {
 				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
-					subLessons[subLessonIdx].Teacher, fRoom)
+					subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 			} else {
 				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s %s, %s, аудитория %s", subLessons[subLessonIdx].Type,
-					fLessonName, subLessons[subLessonIdx].Teacher, fRoom)
+					fLessonName, subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 			}
 		}
 	}
@@ -361,15 +318,15 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 	}
 
 	for subLessonIdx, subLessonStr := range subLessonsStr {
-		if len(subLessonStr) > 0 {
-			lessonStr += subLessonStr
+		if subLessonStr != "" {
+			lessonBuilder.WriteString(subLessonStr)
 			if subLessonIdx != len(subLessonsStr)-1 {
-				lessonStr += "; "
+				lessonBuilder.WriteString("; ")
 			}
 		}
 	}
 
-	dc.DrawStringWrapped(lessonStr, cellX, cellY-143, 0, 0, cellWidth-20, 1.7, 1)
+	dc.DrawStringWrapped(lessonBuilder.String(), cellX, cellY-143, 0, 0, cellWidth-20, 1.7, 1)
 
 	if hasFontChanged {
 		_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
@@ -505,22 +462,29 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
 			// if the row contains teacher and room
 			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
-				subLesson := types.SubLesson{
+				room := reFindRoom.FindString(splitLessonInfoHTML[j])
+
+				// remove extra characters from the room
+				r := strings.NewReplacer(" ", "", ".", "", "_", "-")
+
+				lesson.SubLessons = append(lesson.SubLessons, types.SubLesson{
 					Duration: types.Duration(lessonIdx),
 					Type:     subLessonType,
 					Group:    groupName,
 					Name:     subLessonName,
 					Teacher:  reFindTeacher.FindString(splitLessonInfoHTML[j]),
-					Room:     reFindRoom.FindString(splitLessonInfoHTML[j]),
-				}
-				lesson.SubLessons = append(lesson.SubLessons, subLesson)
+					Room:     r.Replace(room),
+				})
 			} else {
+				// add spaces next to special characters (so that there are more hyphenation options when drawing)
+				r := strings.NewReplacer(",", ", ", ".", ". ", "-", " - ")
+
 				if j == 0 {
 					subLessonTypeAndName := strings.Split(splitLessonInfoHTML[j], ".")
 					subLessonType = determineLessonType(subLessonTypeAndName[0])
-					subLessonName = strings.Join(subLessonTypeAndName[1:], ". ")
+					subLessonName = r.Replace(subLessonTypeAndName[1])
 				} else {
-					subLessonName = splitLessonInfoHTML[j]
+					subLessonName = r.Replace(splitLessonInfoHTML[j])
 				}
 			}
 		}

@@ -1,5 +1,10 @@
 package types
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Schedule represents the full schedule that contains two school Weeks.
 type Schedule struct {
 	Weeks [2]Week
@@ -18,6 +23,32 @@ type Day struct {
 // Lesson represents the lesson (the cell in the schedule table) that can contain one or more SubLessons.
 type Lesson struct {
 	SubLessons []SubLesson
+}
+
+// String returns a string representation of Lesson.
+func (l Lesson) String() string {
+	var lessonBuilder strings.Builder
+	_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
+		int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
+
+	if len(l.SubLessons) == 1 {
+		lessonBuilder.WriteString(l.SubLessons[0].String())
+	} else {
+		var subLessonsBuilder strings.Builder
+		for _, subLesson := range l.SubLessons {
+			if strings.Contains(subLesson.Name, subLesson.Teacher) || strings.Contains(subLesson.Name, subLesson.Room) {
+				continue
+			}
+
+			subgroupLessonInfo := fmt.Sprintf("%s; ", subLesson.String())
+			if !strings.Contains(subLessonsBuilder.String(), subgroupLessonInfo) {
+				subLessonsBuilder.WriteString(subgroupLessonInfo)
+			}
+		}
+		lessonBuilder.WriteString(strings.TrimSuffix(subLessonsBuilder.String(), "; "))
+	}
+	lessonBuilder.WriteString("\n\n")
+	return lessonBuilder.String()
 }
 
 // LessonType is the type of the lesson. Can take 3 values: Lecture, Laboratory and Practice.
@@ -50,6 +81,11 @@ type SubLesson struct {
 	Name     string
 	Teacher  string
 	Room     string
+}
+
+// String returns a string representation of SubLesson.
+func (sl SubLesson) String() string {
+	return fmt.Sprintf("%s %s, %s, аудитория %s", sl.Type, sl.Name, sl.Teacher, sl.Room)
 }
 
 // Faculty represents the faculty.
