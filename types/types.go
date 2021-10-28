@@ -28,7 +28,7 @@ type Lesson struct {
 // String returns a string representation of Lesson.
 func (l Lesson) String() string {
 	var lessonBuilder strings.Builder
-	if len(l.SubLessons) > 0 {
+	if l.SubLessons != nil {
 		_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
 			int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
 
