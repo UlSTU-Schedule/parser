@@ -1,7 +1,6 @@
 package schedule
 
 import (
-	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
@@ -63,7 +62,7 @@ func GetDailyGroupScheduleByDate(groupName, date string) (*types.Day, error) {
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -99,7 +98,7 @@ func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, erro
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -128,7 +127,7 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -351,7 +350,7 @@ func formatLessonNameToFitIntoCell(lessonName string) string {
 // GetWeeklyGroupSchedule returns *types.Week received from the full schedule based on the selected school week.
 func GetWeeklyGroupSchedule(groupName string, weekNum int) (*types.Week, error) {
 	if weekNum < 0 || weekNum > 1 {
-		return nil, errors.New("incorrect value of the week number: it can be either zero or one")
+		return nil, &types.IncorrectWeekNumberError{WeekNum: weekNum}
 	}
 
 	schedule, err := GetFullGroupSchedule(groupName)
@@ -360,7 +359,7 @@ func GetWeeklyGroupSchedule(groupName string, weekNum int) (*types.Week, error) 
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum], nil
 }
