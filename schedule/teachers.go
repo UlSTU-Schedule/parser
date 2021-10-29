@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	teacherScheduleURL  = "https://old.ulstu.ru/schedule/teachers/%s"
-	tableTeacherImgPath = "assets/weekly_schedule_teacher_template.png"
+	teacherScheduleURL          = "https://old.ulstu.ru/schedule/teachers/%s"
+	tableTeacherImgPath         = "assets/weekly_schedule_teacher_template.png"
 	headingTableTeacherFontSize = 38
 )
 
@@ -216,7 +216,8 @@ func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y floa
 	formattedRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
 	formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
 
-	infoAboutLesson := fmt.Sprintf("%s \n%s %s \nаудитория %s", groups, subLessons[0].Type, formattedLesson, formattedRoom)
+	infoAboutLesson := fmt.Sprintf("%s \n%s %s \nаудитория %s", groups, subLessons[0].Type.String(),
+		formattedLesson, formattedRoom)
 
 	wrappedInfoStr := dc.WordWrap(infoAboutLesson, cellWidth-20)
 
@@ -276,15 +277,15 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 				teacherSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
 			}
 		})
-	} else{
+	} else {
 		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
 		weekNum, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
-		
+
 		pSelection.Each(func(i int, s *goquery.Selection) {
 			if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
 				dayIdx := i/10 - 2
 				lessonIdx := i%10 - 2
-				teacherSchedule.Weeks[weekNum - 1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
+				teacherSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
 			}
 		})
 	}
@@ -301,14 +302,14 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 
 	switch daysAfterCurr {
 	case 0:
-		result.WriteString(fmt.Sprintf("%s проводит следующие пары сегодня (%s, %s, %d-ая учебная неделя):\n\n", teacherName,
-			weekDay, dateStr, weekNum+1))
+		_, _ = fmt.Fprintf(&result, "%s проводит следующие пары сегодня (%s, %s, %d-ая учебная неделя):\n\n",
+			teacherName, weekDay, dateStr, weekNum+1)
 	case 1:
-		result.WriteString(fmt.Sprintf("%s проводит следующие пары завтра (%s, %s, %d-ая учебная неделя):\n\n", teacherName,
-			weekDay, dateStr, weekNum+1))
+		_, _ = fmt.Fprintf(&result, "%s проводит следующие пары завтра (%s, %s, %d-ая учебная неделя):\n\n",
+			teacherName, weekDay, dateStr, weekNum+1)
 	default:
-		result.WriteString(fmt.Sprintf("%s проводит следующие пары %s (%s, %d-ая учебная неделя):\n\n", teacherName,
-			dateStr, weekDay, weekNum+1))
+		_, _ = fmt.Fprintf(&result, "%s проводит следующие пары %s (%s, %d-ая учебная неделя):\n\n", teacherName,
+			dateStr, weekDay, weekNum+1)
 	}
 
 	noLessons := true
@@ -322,16 +323,17 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 			lessonNumber := lessonIndex + 1
 			lessonType := subLessons[0].Type
 			lessonName := subLessons[0].Name
-			lessonTypeWithName := fmt.Sprintf("%s %s", lessonType, lessonName)
+			lessonTypeWithName := fmt.Sprintf("%s %s", lessonType.String(), lessonName)
 			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
 			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
 
+			// TODO: len(strings.Split(groups, ",")) > 1 --> strings.Count(groups, ",") > 0 (см. реализацю strings.Split, внутри которой есть strings.Count)
 			if len(strings.Split(groups, ",")) > 1 {
-				result.WriteString(fmt.Sprintf("%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
-					lessonNumber, subLessons[0].Duration, lessonTypeWithName, lessonRoom, groups))
+				_, _ = fmt.Fprintf(&result, "%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
+					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, lessonRoom, groups)
 			} else {
-				result.WriteString(fmt.Sprintf("%d-ая пара (%s): %s, %s, аудитория %s\n\n",
-					lessonNumber, subLessons[0].Duration, lessonTypeWithName, groups, lessonRoom))
+				_, _ = fmt.Fprintf(&result, "%d-ая пара (%s): %s, %s, аудитория %s\n\n",
+					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, groups, lessonRoom)
 			}
 		}
 	}
@@ -343,7 +345,7 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 		case 1:
 			result.WriteString("Завтра пар нет")
 		default:
-			result.WriteString(fmt.Sprintf("%s пар нет", dateStr))
+			_, _ = fmt.Fprintf(&result, "%s пар нет", dateStr)
 		}
 	}
 
@@ -354,9 +356,9 @@ func getGroupsTeacherLesson(subLessons []types.SubLesson) string {
 	var groups strings.Builder
 	for indexSubLesson, subLesson := range subLessons {
 		if indexSubLesson != len(subLessons)-1 {
-			groups.WriteString(fmt.Sprintf("%s, ", subLesson.Group))
+			_, _ = fmt.Fprintf(&groups, "%s, ", subLesson.Group)
 		} else {
-			groups.WriteString(fmt.Sprintf("%s", subLesson.Group))
+			_, _ = fmt.Fprintf(&groups, "%s", subLesson.Group)
 		}
 	}
 	return groups.String()
@@ -368,6 +370,7 @@ func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
 	if !strings.HasPrefix(tableCellHTML, "_") && tableCellHTML != "" {
+		// TODO: применить в этом месте strings.NewReplacer, чтобы не применять одинаковые повторяющиеся Replace (по аналогии с группами)
 		// <br/> separates the name of the lesson, the groups and the audience number
 		splitLessonInfoHTML := strings.Split(tableCellHTML, "<br/>")
 		lessonGroups := strings.Split(splitLessonInfoHTML[0], ",")

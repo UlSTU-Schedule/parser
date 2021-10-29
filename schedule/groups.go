@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	groupScheduleURLTemplate = "https://old.ulstu.ru/schedule/students/part%d/%s"
-	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
-	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
-	tableImgGroupPath        = "assets/weekly_schedule_group_template.png"
-	headingTableGroupFontSize    = 42
+	groupScheduleURLTemplate  = "https://old.ulstu.ru/schedule/students/part%d/%s"
+	findTeacherRegexp         = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
+	findRoomRegexp            = `(\d.*[-_].+)|(\d)`
+	tableImgGroupPath         = "assets/weekly_schedule_group_template.png"
+	headingTableGroupFontSize = 42
 )
 
 // GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
