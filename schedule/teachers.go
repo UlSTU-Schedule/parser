@@ -1,7 +1,6 @@
 package schedule
 
 import (
-	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
@@ -58,7 +57,7 @@ func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error)
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -94,7 +93,7 @@ func GetDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, 
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -122,7 +121,7 @@ func GetDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day,
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, errors.New("the schedule for the selected week is empty or not loaded yet")
+		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }

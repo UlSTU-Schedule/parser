@@ -34,7 +34,7 @@ func getDocFromURL(URL string) (*goquery.Document, error) {
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("status code error: %s %d", response.Status, response.StatusCode)
+		return nil, &types.StatusCodeError{StatusCode: response.StatusCode, StatusText: http.StatusText(response.StatusCode)}
 	}
 
 	// convert from windows-1251 to utf-8
@@ -68,7 +68,6 @@ func getWeekAndWeekDayNumbersByWeekDay(weekday string) (int, int) {
 func getWeekAndWeekDayNumbers(additionalDays int) (int, int) {
 	// getting the current time and adding additionalDays days to it
 	currTimeWithDelta := time.Now().AddDate(0, 0, additionalDays)
-
 	return getWeekAndWeekDayNumbersByTime(currTimeWithDelta)
 }
 
@@ -151,45 +150,24 @@ func getDateTime(date string) (time.Time, error) {
 // format: dd.mm). The year is considered equal to the current one.
 func getDayMonthYearByDate(date string) (int, int, int, error) {
 	year := time.Now().Year()
-	if isDateValid(fmt.Sprintf("%s.%d", date, year)) {
+	dateWithYear := fmt.Sprintf("%s.%d", date, year)
+	if isDateExist(dateWithYear) {
 		dateArray := strings.Split(date, ".")
 		day, _ := strconv.Atoi(dateArray[0])
 		month, _ := strconv.Atoi(dateArray[1])
 		return day, month, year, nil
 	} else {
-		return 0, 0, 0, fmt.Errorf("incorrect date: %s", date)
+		return 0, 0, 0, &types.IncorrectDateError{Date: date}
 	}
 }
 
-// isDateValid checks if the date is correct. The date is correct if it matches the format dd.mm and exists in the
-// current year.
-func isDateValid(date string) bool {
-	dateTime, err := time.Parse("02.01.2006", date)
+// isDateExist checks if the date matches the format "dd.mm" and exists.
+func isDateExist(date string) bool {
+	_, err := time.Parse("02.01.2006", date)
 	if err != nil {
 		return false
 	}
-
-	// if the entered date exists
-	if dateTime.Format("02.01.2006") == date {
-		now := time.Now()
-
-		fallSemStartTime := time.Date(now.Year(), time.Month(9), 1, 0, 0, 0, 0, time.Local)
-		fallSemEndTime := time.Date(now.Year(), time.Month(12), 30, 0, 0, 0, 0, time.Local)
-		// if the entered date and the current date correspond to the fall semester
-		if now.After(fallSemStartTime) && now.Before(fallSemEndTime) &&
-			dateTime.After(fallSemStartTime) && dateTime.Before(fallSemEndTime) {
-			return true
-		}
-
-		springSemStartTime := time.Date(now.Year(), time.Month(2), 1, 0, 0, 0, 0, time.Local)
-		springSemEndTime := time.Date(now.Year(), time.Month(6), 30, 0, 0, 0, 0, time.Local)
-		// if the entered date and the current date correspond to the spring semester
-		if now.After(springSemStartTime) && now.Before(springSemEndTime) &&
-			dateTime.After(springSemStartTime) && dateTime.Before(springSemEndTime) {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 // isWeeklyScheduleEmpty returns true if the weekly schedule is empty, otherwise - false.
