@@ -17,6 +17,7 @@ const (
 	findTeacherRegexp        = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp           = `(\d.*[-_].+)|(\d)`
 	tableImgGroupPath        = "assets/weekly_schedule_group_template.png"
+	headingTableGroupFontSize    = 42
 )
 
 // GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
@@ -210,7 +211,7 @@ func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
 	dc := gg.NewContextForImage(tableImg)
 
 	// writes the group name and the school week number
-	_ = dc.LoadFontFace(fontPath, headingTableFontSize)
+	_ = dc.LoadFontFace(fontPath, headingTableGroupFontSize)
 	dc.SetRGB255(25, 89, 209)
 	dc.DrawString(groupName, 575, 60)
 	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)

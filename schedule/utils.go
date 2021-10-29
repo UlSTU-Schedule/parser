@@ -19,7 +19,6 @@ const (
 
 	fontPath = "assets/Arial.ttf"
 
-	headingTableFontSize    = 42
 	defaultScheduleFontSize = 19
 
 	cellWidth  = 200
