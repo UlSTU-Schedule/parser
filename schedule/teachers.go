@@ -53,11 +53,6 @@ func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error)
 		return nil, err
 	}
 
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
-
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
 	}
@@ -73,10 +68,11 @@ func GetTextDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (string, 
 	}
 
 	weekDayNumNow := int(time.Now().Weekday()) - 1
-	weekDayNum := convertWeekdayToWeekDayIdx(weekDay)
-	if weekDayNum == -1 && weekDayNumNow != -1 {
-		weekDayNum = 6
+	if weekDayNumNow == -1 {
+		weekDayNumNow = 6
 	}
+	weekDayNum := convertWeekdayToWeekDayIdx(weekDay)
+
 	return convertDailyTeacherScheduleToText(teacherName, *schedule, weekDayNum-weekDayNumNow), nil
 }
 
@@ -89,10 +85,6 @@ func GetDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, 
 	}
 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
@@ -117,10 +109,6 @@ func GetDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day,
 	}
 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
@@ -209,12 +197,13 @@ func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y floa
 
 	groups := getGroupsTeacherLesson(subLessons)
 
-	formattedLesson := strings.Replace(subLessons[0].Name, ".", ". ", -1)
-	formattedLesson = strings.Replace(formattedLesson, "-", " - ", -1)
-	formattedLesson = strings.Replace(formattedLesson, ",", ", ", -1)
+	// add spaces next to special characters (so that there are more hyphenation options when drawing)
+	r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
+	formattedLesson := r.Replace(subLessons[0].Name)
 
-	formattedRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
-	formattedRoom = strings.Replace(formattedRoom, ".", "", -1)
+	// remove extra characters from the room
+	r = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
+	formattedRoom := r.Replace(subLessons[0].Room)
 
 	infoAboutLesson := fmt.Sprintf("%s \n%s %s \nаудитория %s", groups, subLessons[0].Type.String(),
 		formattedLesson, formattedRoom)
@@ -298,22 +287,20 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 
 	dateStr := getDateStr(daysAfterCurr)
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
-	weekDay := convertWeekDayIdxToWeekDay(weekDayNum)
 
 	switch daysAfterCurr {
 	case 0:
 		_, _ = fmt.Fprintf(&result, "%s проводит следующие пары сегодня (%s, %s, %d-ая учебная неделя):\n\n",
-			teacherName, weekDay, dateStr, weekNum+1)
+			teacherName, weekDays[weekDayNum], dateStr, weekNum+1)
 	case 1:
 		_, _ = fmt.Fprintf(&result, "%s проводит следующие пары завтра (%s, %s, %d-ая учебная неделя):\n\n",
-			teacherName, weekDay, dateStr, weekNum+1)
+			teacherName, weekDays[weekDayNum], dateStr, weekNum+1)
 	default:
 		_, _ = fmt.Fprintf(&result, "%s проводит следующие пары %s (%s, %d-ая учебная неделя):\n\n", teacherName,
-			dateStr, weekDay, weekNum+1)
+			dateStr, weekDays[weekDayNum], weekNum+1)
 	}
 
 	noLessons := true
-
 	for lessonIndex := 0; lessonIndex < len(dailySchedule.Lessons); lessonIndex++ {
 		subLessons := dailySchedule.Lessons[lessonIndex].SubLessons
 
@@ -327,8 +314,7 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
 			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
 
-			// TODO: len(strings.Split(groups, ",")) > 1 --> strings.Count(groups, ",") > 0 (см. реализацю strings.Split, внутри которой есть strings.Count)
-			if len(strings.Split(groups, ",")) > 1 {
+			if strings.Count(groups, ",") > 0 {
 				_, _ = fmt.Fprintf(&result, "%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
 					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, lessonRoom, groups)
 			} else {
@@ -395,7 +381,7 @@ func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection
 
 // getTeacherURL returns the url to the teacher's schedule on UlSTU site.
 func getTeacherURL(teacherName string) (string, error) {
-	var teacherURL string
+	teacherURL := ""
 
 	doc, err := getDocFromURL(fmt.Sprintf(teacherScheduleURL, "Praspisan.html"))
 	if err != nil {
@@ -412,5 +398,17 @@ func getTeacherURL(teacherName string) (string, error) {
 		}
 		return true
 	})
+
+	if teacherURL != "" {
+		doc, err = getDocFromURL(teacherURL)
+		if err != nil {
+			return "", err
+		}
+
+		teacherNameFromDoc := doc.Find("p").Get(0).LastChild.FirstChild.Data
+		if !strings.Contains(teacherNameFromDoc, teacherName) {
+			return "", &types.LinkPointsToIncorrectObjectError{ObjectName: teacherName, ObjectNameFromURL: teacherNameFromDoc}
+		}
+	}
 	return teacherURL, nil
 }

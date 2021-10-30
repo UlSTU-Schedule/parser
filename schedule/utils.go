@@ -25,6 +25,9 @@ const (
 	cellHeight = 150
 )
 
+// weekDays represents string values of the days of week.
+var weekDays = [7]string{"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"}
+
 // getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
 	response, err := http.Get(URL)
@@ -76,26 +79,6 @@ func getDateStr(additionalDays int) string {
 	return timeWithDelta.Format("02.01.2006")
 }
 
-// convertWeekDayIdxToWeekDay converts the week day number to its string representation.
-func convertWeekDayIdxToWeekDay(weekDayIdx int) string {
-	switch weekDayIdx {
-	case 0:
-		return "Понедельник"
-	case 1:
-		return "Вторник"
-	case 2:
-		return "Среда"
-	case 3:
-		return "Четверг"
-	case 4:
-		return "Пятница"
-	case 5:
-		return "Суббота"
-	default:
-		return "Воскресенье"
-	}
-}
-
 // convertWeekdayToWeekDayIdx converts the string representation of the day of the week to its index in the array.
 func convertWeekdayToWeekDayIdx(weekday string) int {
 	switch strings.ToLower(weekday) {
@@ -112,12 +95,12 @@ func convertWeekdayToWeekDayIdx(weekday string) int {
 	case "суббота":
 		return 5
 	default:
-		return -1
+		return 6
 	}
 }
 
 // getWeekAndWeekDayNumbersByDate returns the number of the school week (0 or 1) and the number of the day of the
-// school week (-1, 0, ..., 6) by the string representation of the date.
+// school week (0, ..., 6) by the string representation of the date.
 func getWeekAndWeekDayNumbersByDate(date string) (int, int, error) {
 	dateTime, err := getDateTime(date)
 	if err != nil {
@@ -128,9 +111,12 @@ func getWeekAndWeekDayNumbersByDate(date string) (int, int, error) {
 }
 
 // getWeekAndWeekDayNumbersByTime returns the number of the school week (0 or 1) and the number of the day of the
-// school week (-1, 0, ..., 6) by time.
+// school week (0, ..., 6) by time.
 func getWeekAndWeekDayNumbersByTime(time time.Time) (int, int) {
 	weekDayNum := int(time.Weekday()) - 1
+	if weekDayNum == -1 {
+		weekDayNum = 6
+	}
 	_, currWeekNumWithDelta := time.ISOWeek()
 	weekNum := (currWeekNumWithDelta + 1) % 2
 	return weekNum, weekDayNum

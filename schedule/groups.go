@@ -57,11 +57,6 @@ func GetDailyGroupScheduleByDate(groupName, date string) (*types.Day, error) {
 		return nil, err
 	}
 
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
-
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
 	}
@@ -77,10 +72,11 @@ func GetTextDailyGroupScheduleByWeekDay(groupName, weekDay string) (string, erro
 	}
 
 	weekDayNumNow := int(time.Now().Weekday()) - 1
-	weekDayNum := convertWeekdayToWeekDayIdx(weekDay)
-	if weekDayNum == -1 && weekDayNumNow != -1 {
-		weekDayNum = 6
+	if weekDayNumNow == -1 {
+		weekDayNumNow = 6
 	}
+	weekDayNum := convertWeekdayToWeekDayIdx(weekDay)
+
 	return convertDailyGroupScheduleToText(groupName, schedule, weekDayNum-weekDayNumNow), nil
 }
 
@@ -93,10 +89,6 @@ func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, erro
 	}
 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
@@ -122,10 +114,6 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 	}
 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
-	// returns weekDayNum = -1 when the day of the week is Sunday
-	if weekDayNum == -1 {
-		return &types.Day{}, nil
-	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
@@ -139,18 +127,17 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 
 	dateStr := getDateStr(daysAfterCurr)
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
-	weekDay := convertWeekDayIdxToWeekDay(weekDayNum)
 
 	switch daysAfterCurr {
 	case 0:
 		_, _ = fmt.Fprintf(&b, "Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
-			weekDay, dateStr, weekNum+1)
+			weekDays[weekDayNum], dateStr, weekNum+1)
 	case 1:
 		_, _ = fmt.Fprintf(&b, "Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
-			weekDay, dateStr, weekNum+1)
+			weekDays[weekDayNum], dateStr, weekNum+1)
 	default:
 		_, _ = fmt.Fprintf(&b, "Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
-			dateStr, weekDay, weekNum+1)
+			dateStr, weekDays[weekDayNum], weekNum+1)
 	}
 
 	noLessons := true
@@ -486,7 +473,7 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 
 // getGroupScheduleURL returns the url to the group's schedule on UlSTU site.
 func getGroupScheduleURL(groupName string) (string, error) {
-	result := ""
+	groupURL := ""
 
 	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
 		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, "raspisan.html"))
@@ -502,22 +489,31 @@ func getGroupScheduleURL(groupName string) (string, error) {
 					for _, foundGroupName = range foundGroupNames {
 						if foundGroupName == groupName {
 							href, _ := s.Find("a").Attr("href")
-							result = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
+							groupURL = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
 							return false
 						}
 					}
 				} else if foundGroupName == groupName {
 					href, _ := s.Find("a").Attr("href")
-					result = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
+					groupURL = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
 					return false
 				}
 			}
 			return true
 		})
 
-		if result != "" {
-			return result, nil
+		if groupURL != "" {
+			doc, err = getDocFromURL(groupURL)
+			if err != nil {
+				return "", err
+			}
+
+			groupNameFromDoc := doc.Find("p").Get(0).LastChild.FirstChild.Data
+			if !strings.Contains(groupNameFromDoc, groupName) {
+				return "", &types.LinkPointsToIncorrectObjectError{ObjectName: groupName, ObjectNameFromURL: groupNameFromDoc}
+			}
+			return groupURL, nil
 		}
 	}
-	return result, nil
+	return groupURL, nil
 }
