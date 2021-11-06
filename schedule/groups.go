@@ -144,7 +144,7 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 	for lessonNum := 0; lessonNum < len(dailySchedule.Lessons); lessonNum++ {
 		if len(dailySchedule.Lessons[lessonNum].SubLessons) > 0 {
 			noLessons = false
-			b.WriteString(dailySchedule.Lessons[lessonNum].String())
+			b.WriteString(dailySchedule.Lessons[lessonNum].StringGroupLesson())
 		}
 	}
 
@@ -263,10 +263,10 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 						subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 				}
 			} else {
-				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].String()
+				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroupSubLesson()
 			}
 		} else {
-			subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].String()
+			subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroupSubLesson()
 		}
 
 		// divides the information about the lesson (consists of sublessons) into parts so that it fits into the cell
@@ -284,7 +284,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 					subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
 			} else {
 				subLessons[subLessonIdx].Name = fLessonName
-				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].String()
+				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroupSubLesson()
 			}
 		}
 	}

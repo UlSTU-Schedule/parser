@@ -25,15 +25,15 @@ type Lesson struct {
 	SubLessons []SubLesson
 }
 
-// String returns a string representation of Lesson.
-func (l Lesson) String() string {
+// StringGroupLesson returns a string representation of Lesson based on the structure of the lesson display for groups.
+func (l Lesson) StringGroupLesson() string {
 	if l.SubLessons != nil {
 		var lessonBuilder strings.Builder
 		_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
 			int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
 
 		if len(l.SubLessons) == 1 {
-			lessonBuilder.WriteString(l.SubLessons[0].String())
+			lessonBuilder.WriteString(l.SubLessons[0].StringGroupSubLesson())
 		} else {
 			var subLessonsBuilder strings.Builder
 			for _, subLesson := range l.SubLessons {
@@ -41,7 +41,7 @@ func (l Lesson) String() string {
 					continue
 				}
 
-				subgroupLessonInfo := fmt.Sprintf("%s; ", subLesson.String())
+				subgroupLessonInfo := fmt.Sprintf("%s; ", subLesson.StringGroupSubLesson())
 				if !strings.Contains(subLessonsBuilder.String(), subgroupLessonInfo) {
 					subLessonsBuilder.WriteString(subgroupLessonInfo)
 				}
@@ -86,8 +86,8 @@ type SubLesson struct {
 	Room     string
 }
 
-// String returns a string representation of SubLesson.
-func (sl SubLesson) String() string {
+// StringGroupSubLesson returns a string representation of SubLesson based on the structure of the lesson display for groups.
+func (sl SubLesson) StringGroupSubLesson() string {
 	if sl.Name != "" {
 		if sl.Teacher != "" {
 			return fmt.Sprintf("%s %s, %s, аудитория %s", sl.Type, sl.Name, sl.Teacher, sl.Room)
