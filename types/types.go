@@ -1,3 +1,5 @@
+//go:generate easyjson -no_std_marshalers types.go
+
 package types
 
 import (
@@ -6,23 +8,24 @@ import (
 )
 
 // Schedule represents the full schedule that contains two school Weeks.
+//easyjson:json
 type Schedule struct {
-	Weeks [2]Week
+	Weeks [2]Week `json:"weeks"`
 }
 
 // Week represents the school week (one of two schedule tables) that contains six Days (without Sunday).
 type Week struct {
-	Days [7]Day
+	Days [7]Day `json:"days"`
 }
 
 // Day represents the school day (the row in the schedule table) that contains eight Lessons.
 type Day struct {
-	Lessons [8]Lesson
+	Lessons [8]Lesson `json:"lessons"`
 }
 
 // Lesson represents the lesson (the cell in the schedule table) that can contain one or more SubLessons.
 type Lesson struct {
-	SubLessons []SubLesson
+	SubLessons []SubLesson `json:"sub_lessons"`
 }
 
 // StringGroupLesson returns a string representation of Lesson based on the structure of the lesson display for groups.
@@ -78,12 +81,12 @@ func (d Duration) String() string {
 // SubLesson represents the nested lesson. During the time of one lesson, a group or teacher can have several
 // SubLessons at the same time.
 type SubLesson struct {
-	Duration Duration
-	Type     LessonType
-	Group    string
-	Name     string
-	Teacher  string
-	Room     string
+	Duration Duration   `json:"duration"`
+	Type     LessonType `json:"type"`
+	Group    string     `json:"group"`
+	Name     string     `json:"name"`
+	Teacher  string     `json:"teacher"`
+	Room     string     `json:"room"`
 }
 
 // StringGroupSubLesson returns a string representation of SubLesson based on the structure of the lesson display for groups.
