@@ -517,3 +517,31 @@ func getGroupScheduleURL(groupName string) (string, error) {
 	}
 	return groupURL, nil
 }
+
+// GetGroups returns all available group names from UlSTU site.
+func GetGroups() []string {
+	// there cannot be more than 400 groups
+	groups := make([]string, 0, 400)
+
+	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
+		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, "raspisan.html"))
+		if err != nil {
+			continue
+		}
+
+		doc.Find("td").Each(func(i int, s *goquery.Selection) {
+			foundGroupName := s.Find("font").Text()
+			if foundGroupName != "" && !strings.Contains(foundGroupName, "курс") {
+				if strings.Contains(foundGroupName, ", ") {
+					foundGroupNames := strings.Split(foundGroupName, ", ")
+					for _, foundGroupName = range foundGroupNames {
+						groups = append(groups, foundGroupName)
+					}
+				} else {
+					groups = append(groups, foundGroupName)
+				}
+			}
+		})
+	}
+	return groups
+}
