@@ -142,9 +142,17 @@ func GetNextWeekTeacherSchedule(teacherName string) (*types.Week, error) {
 
 // GetWeeklyTeacherSchedule return object of weekly schedule
 func GetWeeklyTeacherSchedule(teacherName string, weekNum int) (*types.Week, error) {
+	if weekNum < 0 || weekNum > 1 {
+		return nil, &types.IncorrectWeekNumberError{WeekNum: weekNum}
+	}
+
 	schedule, err := GetFullTeacherSchedule(teacherName)
 	if err != nil {
 		return nil, err
+	}
+
+	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
+		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum], nil
 }
@@ -197,16 +205,8 @@ func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y floa
 
 	groups := getGroupsTeacherLesson(subLessons)
 
-	// add spaces next to special characters (so that there are more hyphenation options when drawing)
-	r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
-	formattedLesson := r.Replace(subLessons[0].Name)
-
-	// remove extra characters from the room
-	r = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
-	formattedRoom := r.Replace(subLessons[0].Room)
-
 	infoAboutLesson := fmt.Sprintf("%s \n%s %s \nаудитория %s", groups, subLessons[0].Type.String(),
-		formattedLesson, formattedRoom)
+		subLessons[0].Name, subLessons[0].Room)
 
 	wrappedInfoStr := dc.WordWrap(infoAboutLesson, cellWidth-20)
 
@@ -311,15 +311,13 @@ func convertDailyTeacherScheduleToText(teacherName string, dailySchedule types.D
 			lessonType := subLessons[0].Type
 			lessonName := subLessons[0].Name
 			lessonTypeWithName := fmt.Sprintf("%s %s", lessonType.String(), lessonName)
-			lessonRoom := strings.Replace(subLessons[0].Room, " ", "", -1)
-			lessonRoom = strings.Replace(lessonRoom, ".", "", -1)
 
 			if strings.Count(groups, ",") > 0 {
 				_, _ = fmt.Fprintf(&result, "%d-ая пара (%s): %s, аудитория %s. Группы: %s\n\n",
-					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, lessonRoom, groups)
+					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, subLessons[0].Room, groups)
 			} else {
 				_, _ = fmt.Fprintf(&result, "%d-ая пара (%s): %s, %s, аудитория %s\n\n",
-					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, groups, lessonRoom)
+					lessonNumber, subLessons[0].Duration.String(), lessonTypeWithName, groups, subLessons[0].Room)
 			}
 		}
 	}
@@ -363,15 +361,17 @@ func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection
 		lesson.SubLessons = make([]types.SubLesson, 0, len(lessonGroups))
 		lessonTypeAndName := strings.Split(splitLessonInfoHTML[1], ".")
 		lessonType := determineLessonType(lessonTypeAndName[0])
-		lessonName := strings.TrimSpace(lessonTypeAndName[len(lessonTypeAndName)-1])
+		r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
+		lessonName := r.Replace(strings.TrimSpace(lessonTypeAndName[len(lessonTypeAndName)-1]))
 		for _, groupName := range lessonGroups {
+			r = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
 			groupLesson := types.SubLesson{
 				Duration: types.Duration(lessonIdx),
 				Type:     lessonType,
 				Group:    groupName,
 				Name:     lessonName,
 				Teacher:  teacher,
-				Room:     splitLessonInfoHTML[2],
+				Room:     r.Replace(splitLessonInfoHTML[2]),
 			}
 			lesson.SubLessons = append(lesson.SubLessons, groupLesson)
 		}
@@ -411,4 +411,21 @@ func getTeacherURL(teacherName string) (string, error) {
 		}
 	}
 	return teacherURL, nil
+}
+
+func GetTeachers() ([]string, error)  {
+	teachers := make([]string, 0, 800)
+
+	doc, err := getDocFromURL(fmt.Sprintf(teacherScheduleURL, "Praspisan.html"))
+	if err != nil {
+		return nil, err
+	}
+	doc.Find("td").Each(func(i int, s *goquery.Selection) {
+		if i > 0 {
+			foundTeacherName := s.Find("font").Text()
+			formattedTeacherName := strings.Split(foundTeacherName, ",")[0]
+			teachers = append(teachers, formattedTeacherName)
+		}
+	})
+	return teachers, nil
 }

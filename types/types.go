@@ -57,6 +57,13 @@ func (l Lesson) StringGroupLesson() string {
 	return ""
 }
 
+func (l Lesson) StringTeacherLesson() string {
+	if l.SubLessons != nil {
+
+	}
+	return ""
+}
+
 // LessonType is the type of the lesson. Can take 3 values: Lecture, Laboratory and Practice.
 type LessonType int
 
