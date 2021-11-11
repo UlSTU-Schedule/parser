@@ -57,6 +57,28 @@ func (l Lesson) StringGroupLesson() string {
 	return ""
 }
 
+func (l Lesson) StringTeacherLesson() string {
+	if l.SubLessons != nil {
+		var lessonBuilder strings.Builder
+
+		groups := l.GetGroupsTeacherLesson()
+		lessonNumber := l.SubLessons[0].Duration + 1
+		lessonType := l.SubLessons[0].Type
+		lessonName := l.SubLessons[0].Name
+		lessonTypeWithName := fmt.Sprintf("%s %s", lessonType.String(), lessonName)
+
+		_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): %s", lessonNumber, l.SubLessons[0].Duration.String(), lessonTypeWithName)
+
+		if strings.Count(groups, ",") > 0 {
+			_, _ = fmt.Fprintf(&lessonBuilder, ", аудитория %s. Группы: %s\n\n", l.SubLessons[0].Room, groups)
+		} else{
+			_, _ = fmt.Fprintf(&lessonBuilder, " %s, аудитория %s\n\n", groups, l.SubLessons[0].Room)
+		}
+		return lessonBuilder.String()
+	}
+	return ""
+}
+
 // LessonType is the type of the lesson. Can take 3 values: Lecture, Laboratory and Practice.
 type LessonType int
 
@@ -99,4 +121,16 @@ func (sl SubLesson) StringGroupSubLesson() string {
 		}
 	}
 	return ""
+}
+
+func (l Lesson) GetGroupsTeacherLesson() string {
+	var groups strings.Builder
+	for indexSubLesson, subLesson := range l.SubLessons {
+		if indexSubLesson != len(l.SubLessons)-1 {
+			_, _ = fmt.Fprintf(&groups, "%s, ", subLesson.Group)
+		} else {
+			_, _ = fmt.Fprintf(&groups, "%s", subLesson.Group)
+		}
+	}
+	return groups.String()
 }
