@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	_ "embed"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
@@ -16,9 +17,11 @@ const (
 	groupScheduleURLTemplate  = "https://old.ulstu.ru/schedule/students/part%d/%s"
 	findTeacherRegexp         = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
 	findRoomRegexp            = `(\d.*[-_].+)|(\d)`
-	tableImgGroupPath         = "assets/weekly_schedule_group_template.png"
 	headingTableGroupFontSize = 42
 )
+
+//go:embed assets/weekly_schedule_group_template.png
+var weeklyScheduleGroupTemp []byte
 
 // GetTextDailyGroupScheduleByDate returns a text representation of the daily schedule based on the the string
 // representation of the date.
@@ -193,12 +196,13 @@ func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
 		return "", err
 	}
 
-	// loads an image of an empty table that will be filled in pairs
-	tableImg, _ := gg.LoadPNG(tableImgGroupPath)
+	// loads an template of an empty table that will be filled in pairs
+	tableImg := getWeeklyScheduleTmplImg(weeklyScheduleGroupTemp)
 	dc := gg.NewContextForImage(tableImg)
 
+	setFont(headingTableGroupFontSize, dc)
+
 	// writes the group name and the school week number
-	_ = dc.LoadFontFace(fontPath, headingTableGroupFontSize)
 	dc.SetRGB255(25, 89, 209)
 	dc.DrawString(groupName, 575, 60)
 	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)
@@ -229,7 +233,7 @@ func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
 		}
 	}
 
-	weeklySchedulePath := fmt.Sprintf("assets/weekly_schedule%d.png", getRandInt())
+	weeklySchedulePath := fmt.Sprintf("weekly_schedule%d.png", getRandInt())
 	return weeklySchedulePath, dc.SavePNG(weeklySchedulePath)
 }
 
@@ -305,10 +309,10 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 		}
 	}
 
-	dc.DrawStringWrapped(lessonBuilder.String(), cellX, cellY-143, 0, 0, cellWidth-20, 1.7, 1)
+	dc.DrawStringWrapped(lessonBuilder.String(), cellX, cellY-143, 0, 0, cellWidth-20, 1.3, 1)
 
 	if hasFontChanged {
-		_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
+		setFont(defaultScheduleFontSize, dc)
 	}
 }
 

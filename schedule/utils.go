@@ -1,11 +1,15 @@
 package schedule
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
 	"github.com/ulstu-schedule/parser/types"
 	"golang.org/x/text/encoding/charmap"
+	"image"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -17,13 +21,14 @@ const (
 	imgWidth  = 1722
 	imgHeight = 1104
 
-	fontPath = "assets/Arial.ttf"
-
 	defaultScheduleFontSize = 19
 
 	cellWidth  = 200
 	cellHeight = 150
 )
+
+//go:embed assets/Arial.ttf
+var font []byte
 
 // weekDays represents string values of the days of week.
 var weekDays = [7]string{"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"}
@@ -173,13 +178,6 @@ func getRandInt() int {
 	return rand.Int()
 }
 
-// setDefaultSettings sets the default drawing settings.
-func setDefaultSettings(dc *gg.Context) {
-	dc.Stroke()
-	dc.SetRGB255(0, 0, 0)
-	_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
-}
-
 // highlightRow highlights the row in the table in blue.
 func highlightRow(row int, dc *gg.Context) {
 	dc.DrawRectangle(4, float64(row-cellHeight), imgWidth-4, cellHeight)
@@ -189,20 +187,43 @@ func highlightRow(row int, dc *gg.Context) {
 	setDefaultSettings(dc)
 }
 
-// setFontSize sets the font size depending on the number of lesson parts (lines) in the table cell.
+// setDefaultSettings sets the default drawing settings.
+func setDefaultSettings(dc *gg.Context) {
+	dc.Stroke()
+	dc.SetRGB255(0, 0, 0)
+
+	setFont(defaultScheduleFontSize, dc)
+}
+
+// setFontSize sets the font's size depending on the number of lesson parts (lines) in the table cell.
 func setFontSize(lessonPartsNum int, dc *gg.Context) {
 	switch {
 	case lessonPartsNum == 6:
-		_ = dc.LoadFontFace(fontPath, 16.5)
+		setFont(16.5, dc)
 	case lessonPartsNum == 7:
-		_ = dc.LoadFontFace(fontPath, 16)
+		setFont(16, dc)
 	case lessonPartsNum == 8:
-		_ = dc.LoadFontFace(fontPath, 15)
+		setFont(15, dc)
 	case lessonPartsNum == 9:
-		_ = dc.LoadFontFace(fontPath, 14)
+		setFont(14, dc)
 	case lessonPartsNum == 10:
-		_ = dc.LoadFontFace(fontPath, 13.5)
+		setFont(13.5, dc)
 	default:
-		_ = dc.LoadFontFace(fontPath, 12.5)
+		setFont(12.5, dc)
 	}
+}
+
+// getWeeklyScheduleTmplImg returns image.Image based on a byte slice of the embedding png templates.
+func getWeeklyScheduleTmplImg(embeddingTmpl []byte) image.Image {
+	weeklyScheduleTmpl, _, _ := image.Decode(bytes.NewReader(embeddingTmpl))
+	return weeklyScheduleTmpl
+}
+
+// setFont ...
+func setFont(fontSize float64, dc *gg.Context) {
+	fnt, _ := truetype.Parse(font)
+	face := truetype.NewFace(fnt, &truetype.Options{
+		Size: fontSize,
+	})
+	dc.SetFontFace(face)
 }

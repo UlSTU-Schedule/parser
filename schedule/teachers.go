@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	_ "embed"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
@@ -12,9 +13,11 @@ import (
 
 const (
 	teacherScheduleURL          = "https://old.ulstu.ru/schedule/teachers/%s"
-	tableTeacherImgPath         = "assets/weekly_schedule_teacher_template.png"
 	headingTableTeacherFontSize = 38
 )
+
+//go:embed assets/weekly_schedule_teacher_template.png
+var weeklyScheduleTeacherTemp []byte
 
 // GetTextDailyTeacherScheduleByDate returns a text representation of the daily schedule based on the the string
 // representation of the date.
@@ -164,10 +167,11 @@ func GetWeeklyTeacherScheduleImg(teacherName string, weekNum int) (string, error
 		return "", err
 	}
 
-	tableImg, _ := gg.LoadPNG(tableTeacherImgPath)
+	// loads an template of an empty table that will be filled in pairs
+	tableImg := getWeeklyScheduleTmplImg(weeklyScheduleTeacherTemp)
 	dc := gg.NewContextForImage(tableImg)
 
-	_ = dc.LoadFontFace(fontPath, headingTableTeacherFontSize)
+	setFont(headingTableTeacherFontSize, dc)
 	dc.SetRGB255(25, 89, 209)
 	dc.DrawString(teacherName, 515, 60)
 	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)
@@ -195,7 +199,7 @@ func GetWeeklyTeacherScheduleImg(teacherName string, weekNum int) (string, error
 		}
 	}
 	dc.Stroke()
-	weeklySchedulePath := fmt.Sprintf("assets/weekly_schedule%d.png", getRandInt())
+	weeklySchedulePath := fmt.Sprintf("weekly_schedule%d.png", getRandInt())
 	return weeklySchedulePath, dc.SavePNG(weeklySchedulePath)
 }
 
@@ -218,11 +222,10 @@ func drawLessonForWeeklySchedule(lesson *types.Lesson, dc *gg.Context, x, y floa
 		hasFontChanged = true
 	}
 
-	dc.DrawStringWrapped(infoAboutLesson, x, y-143, 0, 0, cellWidth-20, 1.7, 1)
+	dc.DrawStringWrapped(infoAboutLesson, x, y-143, 0, 0, cellWidth-20, 1.3, 1)
 
 	if hasFontChanged {
-		_ = dc.LoadFontFace(fontPath, defaultScheduleFontSize)
-		hasFontChanged = false
+		setFont(defaultScheduleFontSize, dc)
 	}
 }
 
@@ -330,7 +333,6 @@ func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
 	if !strings.HasPrefix(tableCellHTML, "_") && tableCellHTML != "" {
-		// TODO: применить в этом месте strings.NewReplacer, чтобы не применять одинаковые повторяющиеся Replace (по аналогии с группами)
 		// <br/> separates the name of the lesson, the groups and the audience number
 		splitLessonInfoHTML := strings.Split(tableCellHTML, "<br/>")
 		lessonGroups := strings.Split(splitLessonInfoHTML[0], ",")
@@ -389,7 +391,7 @@ func getTeacherURL(teacherName string) (string, error) {
 	return teacherURL, nil
 }
 
-func GetTeachers() ([]string, error)  {
+func GetTeachers() ([]string, error) {
 	teachers := make([]string, 0, 800)
 
 	doc, err := getDocFromURL(fmt.Sprintf(teacherScheduleURL, "Praspisan.html"))
