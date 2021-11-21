@@ -196,6 +196,12 @@ func GetWeeklyGroupScheduleImg(groupName string, weekNum int) (string, error) {
 		return "", err
 	}
 
+	return GetImgByWeeklyGroupSchedule(schedule, groupName, weekNum)
+}
+
+// GetImgByWeeklyGroupSchedule returns the path to the image with the weekly schedule based on the weekly schedule of
+// the group, the name of the group and the selected school week.
+func GetImgByWeeklyGroupSchedule(schedule *types.Week, groupName string, weekNum int) (string, error) {
 	// loads an template of an empty table that will be filled in pairs
 	tableImg := getWeeklyScheduleTmplImg(weeklyScheduleGroupTemp)
 	dc := gg.NewContextForImage(tableImg)
