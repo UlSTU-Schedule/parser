@@ -57,7 +57,7 @@ func GetDailyTeacherScheduleByDate(teacherName, date string) (*types.Day, error)
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -90,7 +90,7 @@ func GetDailyTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -114,7 +114,7 @@ func GetDailyTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day,
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -155,7 +155,7 @@ func GetWeeklyTeacherSchedule(teacherName string, weekNum int) (*types.Week, err
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: teacherName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum], nil
 }
@@ -385,7 +385,7 @@ func getTeacherURL(teacherName string) (string, error) {
 
 		teacherNameFromDoc := doc.Find("p").Get(0).LastChild.FirstChild.Data
 		if !strings.Contains(teacherNameFromDoc, teacherName) {
-			return "", &types.LinkPointsToIncorrectObjectError{ObjectName: teacherName, ObjectNameFromURL: teacherNameFromDoc}
+			return "", &types.LinkPointsToIncorrectObjectError{Name: teacherName, NameFromURL: teacherNameFromDoc}
 		}
 	}
 	return teacherURL, nil
