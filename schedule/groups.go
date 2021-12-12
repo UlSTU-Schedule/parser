@@ -29,7 +29,7 @@ var (
 
 var (
 	roomReplacer       = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
-	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
+	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ", "&#34;", "\"")
 )
 
 //go:embed assets/weekly_schedule_group_template.png
@@ -406,7 +406,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 				dayIdx := iDiv10 - 2
 				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
+				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 			// second week lessons
@@ -419,7 +419,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 					lessonIdx = iMod10 - 3
 					dayIdx = iDiv10 - 11
 				}
-				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
+				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 		})
@@ -435,7 +435,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 				dayIdx := iDiv10 - 2
 				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
+				groupSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 		})
@@ -444,8 +444,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	return groupSchedule, nil
 }
 
-// getGroupLessonFromTableCell returns *types.Lesson received from the HTML table cell.
-func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
+// parseGroupLesson returns *types.Lesson received from the HTML table cell.
+func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
 	s *goquery.Selection) *types.Lesson {
 	lesson := &types.Lesson{}
 	tableCellHTML, _ := s.Find("font").Html()
@@ -464,7 +464,7 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 		// if <br/> doesn't separate anything, so we do not take it into account
 		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
 			// if the row contains teacher and room
-			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) && j != 0 {
+			if j != 0 && reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
 				room := reFindRoom.FindString(splitLessonInfoHTML[j])
 
 				lesson.SubLessons = append(lesson.SubLessons, types.SubLesson{
@@ -531,6 +531,7 @@ func getGroupScheduleURL(groupName string) (string, error) {
 			if !strings.Contains(groupNameFromDoc, groupName) {
 				return "", &types.LinkPointsToIncorrectObjectError{Name: groupName, NameFromURL: groupNameFromDoc}
 			}
+
 			return groupURL, nil
 		}
 	}
