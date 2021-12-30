@@ -14,10 +14,22 @@ import (
 )
 
 const (
-	groupScheduleURLTemplate  = "https://old.ulstu.ru/schedule/students/part%d/%s"
-	findTeacherRegexp         = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
-	findRoomRegexp            = `(\d.*[-_].+)|(\d)`
+	groupScheduleURLPattern = "https://old.ulstu.ru/schedule/students/part%d/%s"
+	teacherPattern          = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
+	roomPattern             = `(\d.*[-_].+)|(\d)`
+
 	headingTableGroupFontSize = 42
+)
+
+var (
+	findTeacherAndRoom = regexp.MustCompile(fmt.Sprintf(`^%s %s$`, teacherPattern, roomPattern))
+	findTeacher        = regexp.MustCompile(teacherPattern)
+	findRoom           = regexp.MustCompile(roomPattern)
+)
+
+var (
+	roomReplacer       = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
+	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ", "&#34;", "\"")
 )
 
 //go:embed assets/weekly_schedule_group_template.png
@@ -61,7 +73,7 @@ func GetDailyGroupScheduleByDate(groupName, date string) (*types.Day, error) {
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -94,7 +106,7 @@ func GetDailyGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, erro
 	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
@@ -119,27 +131,27 @@ func GetDailyGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, err
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
 // convertDailyGroupScheduleToText converts the information that *types.Day contains into text.
 func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day, daysAfterCurr int) string {
-	var b strings.Builder
+	sb := &strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 
 	switch daysAfterCurr {
 	case 0:
-		_, _ = fmt.Fprintf(&b, "Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
+		_, _ = fmt.Fprintf(sb, "Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
 			weekDays[weekDayNum], dateStr, weekNum+1)
 	case 1:
-		_, _ = fmt.Fprintf(&b, "Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
+		_, _ = fmt.Fprintf(sb, "Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
 			weekDays[weekDayNum], dateStr, weekNum+1)
 	default:
-		_, _ = fmt.Fprintf(&b, "Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
+		_, _ = fmt.Fprintf(sb, "Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
 			dateStr, weekDays[weekDayNum], weekNum+1)
 	}
 
@@ -147,22 +159,23 @@ func convertDailyGroupScheduleToText(groupName string, dailySchedule *types.Day,
 	for lessonNum := 0; lessonNum < len(dailySchedule.Lessons); lessonNum++ {
 		if len(dailySchedule.Lessons[lessonNum].SubLessons) > 0 {
 			noLessons = false
-			b.WriteString(dailySchedule.Lessons[lessonNum].StringGroupLesson())
+			sb.WriteString(dailySchedule.Lessons[lessonNum].StringGroupLesson())
 		}
 	}
 
 	if noLessons {
 		switch daysAfterCurr {
 		case 0:
-			b.WriteString("Сегодня пар нет")
+			sb.WriteString("Сегодня пар нет")
 		case 1:
-			b.WriteString("Завтра пар нет")
+			sb.WriteString("Завтра пар нет")
 		default:
-			_, _ = fmt.Fprintf(&b, "%s пар нет", dateStr)
+			_, _ = fmt.Fprintf(sb, "%s пар нет", dateStr)
 		}
+		sb.WriteString("\n\n")
 	}
 
-	return b.String()
+	return sb.String()
 }
 
 // GetCurrWeekGroupScheduleImg returns the path to the image with the weekly schedule based on the current school week.
@@ -248,7 +261,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 	// the number of lines into which the information about the lesson is divided
 	lessonPartsNum := 0
 	// information about the lesson to be placed in a table cell
-	var lessonBuilder strings.Builder
+	lessonBuilder := &strings.Builder{}
 	// a slice for the schedule of subgroups and different classes for one group
 	subLessonsStr := make([]string, len(subLessons))
 
@@ -357,7 +370,7 @@ func GetWeeklyGroupSchedule(groupName string, weekNum int) (*types.Week, error) 
 	}
 
 	if isWeeklyScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableWeeklyScheduleError{Object: groupName, WeekNum: weekNum}
+		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum}
 	}
 	return &schedule.Weeks[weekNum], nil
 }
@@ -369,16 +382,17 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		return nil, err
 	}
 
+	// this group is not on the website with a schedule (the group does not exist or the schedule has not been loaded yet)
+	if url == "" {
+		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1}
+	}
+
 	doc, err := getDocFromURL(url)
 	if err != nil {
 		return nil, err
 	}
 
-	groupSchedule := new(types.Schedule)
-
-	reFindTeacherAndRoom := regexp.MustCompile(fmt.Sprintf(`^%s %s$`, findTeacherRegexp, findRoomRegexp))
-	reFindTeacher := regexp.MustCompile(findTeacherRegexp)
-	reFindRoom := regexp.MustCompile(findRoomRegexp)
+	groupSchedule := &types.Schedule{}
 
 	pSelection := doc.Find("p")
 
@@ -392,8 +406,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 				dayIdx := iDiv10 - 2
 				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
-					reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
+					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 			// second week lessons
 			if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
@@ -405,8 +419,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 					lessonIdx = iMod10 - 3
 					dayIdx = iDiv10 - 11
 				}
-				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
-					reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
+					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 		})
 	} else {
@@ -421,8 +435,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 				dayIdx := iDiv10 - 2
 				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *getGroupLessonFromTableCell(groupName, lessonIdx,
-					reFindTeacherAndRoom, reFindTeacher, reFindRoom, s)
+				groupSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
+					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 		})
 
@@ -430,10 +444,10 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	return groupSchedule, nil
 }
 
-// getGroupLessonFromTableCell returns *types.Lesson received from the HTML table cell.
-func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
+// parseGroupLesson returns *types.Lesson received from the HTML table cell.
+func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reFindTeacher, reFindRoom *regexp.Regexp,
 	s *goquery.Selection) *types.Lesson {
-	lesson := new(types.Lesson)
+	lesson := &types.Lesson{}
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
 	if tableCellHTML != "" {
@@ -450,11 +464,8 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 		// if <br/> doesn't separate anything, so we do not take it into account
 		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
 			// if the row contains teacher and room
-			if reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) && j != 0 {
+			if j != 0 && reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
 				room := reFindRoom.FindString(splitLessonInfoHTML[j])
-
-				// remove extra characters from the room
-				r := strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
 
 				lesson.SubLessons = append(lesson.SubLessons, types.SubLesson{
 					Duration: types.Duration(lessonIdx),
@@ -462,18 +473,16 @@ func getGroupLessonFromTableCell(groupName string, lessonIdx int, reFindTeacherA
 					Group:    groupName,
 					Name:     subLessonName,
 					Teacher:  reFindTeacher.FindString(splitLessonInfoHTML[j]),
-					Room:     r.Replace(room),
+					Room:     roomReplacer.Replace(room), // remove extra characters from the room
 				})
 			} else {
-				// add spaces next to special characters (so that there are more hyphenation options when drawing)
-				r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
-
 				if j == 0 {
 					subLessonTypeAndName := strings.Split(splitLessonInfoHTML[j], ".")
 					subLessonType = determineLessonType(subLessonTypeAndName[0])
-					subLessonName = r.Replace(strings.Join(subLessonTypeAndName[1:], "."))
+					// add spaces next to special characters (so that there are more hyphenation options when drawing)
+					subLessonName = afterSpecCharAdder.Replace(strings.Join(subLessonTypeAndName[1:], "."))
 				} else {
-					subLessonName = r.Replace(splitLessonInfoHTML[j])
+					subLessonName = afterSpecCharAdder.Replace(splitLessonInfoHTML[j])
 				}
 			}
 		}
@@ -486,7 +495,7 @@ func getGroupScheduleURL(groupName string) (string, error) {
 	groupURL := ""
 
 	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
-		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, "raspisan.html"))
+		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
 		if err != nil {
 			return "", err
 		}
@@ -499,13 +508,13 @@ func getGroupScheduleURL(groupName string) (string, error) {
 					for _, foundGroupName = range foundGroupNames {
 						if foundGroupName == groupName {
 							href, _ := s.Find("a").Attr("href")
-							groupURL = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
+							groupURL = fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, href)
 							return false
 						}
 					}
 				} else if foundGroupName == groupName {
 					href, _ := s.Find("a").Attr("href")
-					groupURL = fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, href)
+					groupURL = fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, href)
 					return false
 				}
 			}
@@ -520,8 +529,9 @@ func getGroupScheduleURL(groupName string) (string, error) {
 
 			groupNameFromDoc := doc.Find("p").Get(0).LastChild.FirstChild.Data
 			if !strings.Contains(groupNameFromDoc, groupName) {
-				return "", &types.LinkPointsToIncorrectObjectError{ObjectName: groupName, ObjectNameFromURL: groupNameFromDoc}
+				return "", &types.LinkPointsToIncorrectObjectError{Name: groupName, NameFromURL: groupNameFromDoc}
 			}
+
 			return groupURL, nil
 		}
 	}
@@ -534,7 +544,7 @@ func GetGroups() []string {
 	groups := make([]string, 0, 400)
 
 	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
-		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLTemplate, schedulePartNum, "raspisan.html"))
+		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
 		if err != nil {
 			continue
 		}
