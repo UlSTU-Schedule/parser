@@ -67,10 +67,10 @@ func determineLessonType(lessonType string) types.LessonType {
 }
 
 // getWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
-func getWeekAndWeekDayNumbersByWeekDay(weekday string) (int, int) {
+func getWeekAndWeekDayNumbersByWeekDay(weekDay string) (int, int) {
 	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
-	weekdayNum := convertWeekdayToWeekDayIdx(weekday)
-	return currWeekNum, weekdayNum
+	weekDayNum := convertWeekDayToWeekDayIdx(weekDay)
+	return currWeekNum, weekDayNum
 }
 
 // getWeekAndWeekDayNumbers increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
@@ -86,9 +86,9 @@ func getDateStr(additionalDays int) string {
 	return timeWithDelta.Format("02.01.2006")
 }
 
-// convertWeekdayToWeekDayIdx converts the string representation of the day of the week to its index in the array.
-func convertWeekdayToWeekDayIdx(weekday string) int {
-	switch strings.ToLower(weekday) {
+// convertWeekDayToWeekDayIdx converts the string representation of the day of the week to its index in the array.
+func convertWeekDayToWeekDayIdx(weekDay string) int {
+	switch strings.ToLower(weekDay) {
 	case "понедельник":
 		return 0
 	case "вторник":
@@ -162,8 +162,8 @@ func isDateExist(date string) bool {
 	return true
 }
 
-// isWeeklyScheduleEmpty returns true if the weekly schedule is empty, otherwise - false.
-func isWeeklyScheduleEmpty(week types.Week) bool {
+// isWeekScheduleEmpty returns true if the week schedule is empty, otherwise - false.
+func isWeekScheduleEmpty(week types.Week) bool {
 	for _, d := range week.Days {
 		for _, l := range d.Lessons {
 			if l.SubLessons != nil {
@@ -215,13 +215,12 @@ func setFontSize(lessonPartsNum int, dc *gg.Context) {
 	}
 }
 
-// getWeeklyScheduleTmplImg returns image.Image based on a byte slice of the embedding png templates.
-func getWeeklyScheduleTmplImg(embeddingTmpl []byte) image.Image {
-	weeklyScheduleTmpl, _, _ := image.Decode(bytes.NewReader(embeddingTmpl))
-	return weeklyScheduleTmpl
+// getWeekScheduleTmplImg returns image.Image based on a byte slice of the embedding png templates.
+func getWeekScheduleTmplImg(embeddingTmpl []byte) image.Image {
+	weekScheduleTmpl, _, _ := image.Decode(bytes.NewReader(embeddingTmpl))
+	return weekScheduleTmpl
 }
 
-// setFont ...
 func setFont(fontSize float64, dc *gg.Context) {
 	fnt, _ := truetype.Parse(font)
 	face := truetype.NewFace(fnt, &truetype.Options{
