@@ -25,9 +25,7 @@ var (
 	findTeacherAndRoom = regexp.MustCompile(fmt.Sprintf(`^%s %s$`, teacherPattern, roomPattern))
 	findTeacher        = regexp.MustCompile(teacherPattern)
 	findRoom           = regexp.MustCompile(roomPattern)
-)
 
-var (
 	roomReplacer       = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
 	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ", "&#34;", "\"")
 )
@@ -56,6 +54,7 @@ func GetTextDayGroupScheduleByDate(groupName, inputDate string) (string, error) 
 	if nowDateTime.Before(inputDateTime) {
 		diffBetweenInputAndCurrDates++
 	}
+
 	return ConvertDayGroupScheduleToText(schedule, groupName, diffBetweenInputAndCurrDates), nil
 }
 
@@ -205,10 +204,22 @@ func GetCurrWeekGroupScheduleImg(groupName string) (string, error) {
 	return GetWeekGroupScheduleImg(groupName, currWeekNum)
 }
 
+// ParseCurrWeekGroupScheduleImg returns the path to the image with the week schedule based on the current school week.
+func ParseCurrWeekGroupScheduleImg(schedule *types.Week, groupName string) (string, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	return GetImgByWeekGroupSchedule(schedule, groupName, currWeekNum)
+}
+
 // GetNextWeekGroupScheduleImg returns the path to the image with the week schedule based on the next school week.
 func GetNextWeekGroupScheduleImg(groupName string) (string, error) {
 	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
 	return GetWeekGroupScheduleImg(groupName, nextWeekNum)
+}
+
+// ParseNextWeekGroupScheduleImg returns the path to the image with the week schedule based on the next school week.
+func ParseNextWeekGroupScheduleImg(schedule *types.Week, groupName string) (string, error) {
+	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	return GetImgByWeekGroupSchedule(schedule, groupName, nextWeekNum)
 }
 
 // GetWeekGroupScheduleImg returns the path to the image with the week schedule based on the selected school week.
@@ -373,26 +384,44 @@ func GetNextWeekGroupSchedule(groupName string) (*types.Week, error) {
 	return GetWeekGroupSchedule(groupName, nextWeekNum)
 }
 
+// ParseNextWeekGroupSchedule returns *types.Week received from *types.Schedule based on the next school week.
+func ParseNextWeekGroupSchedule(schedule *types.Schedule, groupName string) (*types.Week, error) {
+	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	return ParseWeekGroupSchedule(schedule, groupName, nextWeekNum)
+}
+
 // GetCurrWeekGroupSchedule returns *types.Week received from the UlSTU site based on the current school week.
 func GetCurrWeekGroupSchedule(groupName string) (*types.Week, error) {
 	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
 	return GetWeekGroupSchedule(groupName, currWeekNum)
 }
 
+// ParseCurrWeekGroupSchedule returns *types.Week received from *types.Schedule based on the current school week.
+func ParseCurrWeekGroupSchedule(schedule *types.Schedule, groupName string) (*types.Week, error) {
+	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	return ParseWeekGroupSchedule(schedule, groupName, currWeekNum)
+}
+
 // GetWeekGroupSchedule returns *types.Week received from the UlSTU site based on the selected school week.
 func GetWeekGroupSchedule(groupName string, weekNum int) (*types.Week, error) {
-	if weekNum < 0 || weekNum > 1 {
-		return nil, &types.IncorrectWeekNumberError{WeekNum: weekNum}
-	}
-
 	schedule, err := GetFullGroupSchedule(groupName)
 	if err != nil {
 		return nil, err
 	}
 
+	return ParseWeekGroupSchedule(schedule, groupName, weekNum)
+}
+
+// ParseWeekGroupSchedule returns *types.Week received from *types.Schedule based on the selected school week.
+func ParseWeekGroupSchedule(schedule *types.Schedule, groupName string, weekNum int) (*types.Week, error) {
+	if weekNum < 0 || weekNum > 1 {
+		return nil, &types.IncorrectWeekNumberError{WeekNum: weekNum}
+	}
+
 	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum, WeekDayNum: -1}
 	}
+
 	return &schedule.Weeks[weekNum], nil
 }
 
