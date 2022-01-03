@@ -27,7 +27,7 @@ var (
 	findRoom           = regexp.MustCompile(roomPattern)
 
 	roomReplacer       = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
-	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ", "&#34;", "\"")
+	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ", "&#34;", "'")
 )
 
 //go:embed assets/week_schedule_group_template.png
