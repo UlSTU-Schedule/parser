@@ -11,7 +11,6 @@ type StatusCodeError struct {
 	StatusText string
 }
 
-// StatusCodeError implements Error method.
 func (e *StatusCodeError) Error() string {
 	return fmt.Sprintf("status code error: %d %s", e.StatusCode, http.StatusText(e.StatusCode))
 }
@@ -21,7 +20,6 @@ type IncorrectDateError struct {
 	Date string
 }
 
-// IncorrectDateError implements Error method.
 func (e *IncorrectDateError) Error() string {
 	return fmt.Sprintf("incorrect date: %s", e.Date)
 }
@@ -31,30 +29,28 @@ type IncorrectWeekNumberError struct {
 	WeekNum int
 }
 
-// IncorrectWeekNumberError implements Error method.
 func (e *IncorrectWeekNumberError) Error() string {
 	return fmt.Sprintf("incorrect value of the school week number: %d", e.WeekNum)
 }
 
-// UnavailableScheduleError is returned when the weekly schedule is missing or not published.
+// UnavailableScheduleError is returned when the week schedule is missing or not published.
 type UnavailableScheduleError struct {
-	Name    string // teacher or group name
-	WeekNum int
+	Name       string // teacher or group name
+	WeekNum    int    // equals -1 if the full schedule is requested
+	WeekDayNum int    // equals -1 if the week schedule is requested
 }
 
-// UnavailableScheduleError implements Error method.
 func (e *UnavailableScheduleError) Error() string {
-	return fmt.Sprintf("the schedule is missing or not published: %s, week number is %d",
-		e.Name, e.WeekNum)
+	return fmt.Sprintf("the schedule is missing or not published: the schedule of %s, week number: %d, weekday number: %d",
+		e.Name, e.WeekNum, e.WeekDayNum)
 }
 
-// LinkPointsToIncorrectObjectError is returned when when the schedule on the link does not match the expected schedule.
-type LinkPointsToIncorrectObjectError struct {
+// IncorrectLinkError is returned when when the schedule on the link does not match the expected schedule.
+type IncorrectLinkError struct {
 	Name        string
 	NameFromURL string
 }
 
-// LinkPointsToIncorrectObjectError implements Error method.
-func (e *LinkPointsToIncorrectObjectError) Error() string {
+func (e *IncorrectLinkError) Error() string {
 	return fmt.Sprintf("mismatch between schedule objects: %s != %s", e.Name, e.NameFromURL)
 }
