@@ -40,6 +40,7 @@ func GetTextDayTeacherScheduleByDate(teacherName, inputDate string) (string, err
 	if nowDateTime.Before(inputDateTime) {
 		diffBetweenInputAndCurrDates++
 	}
+
 	return convertDayTeacherScheduleToText(teacherName, *schedule, diffBetweenInputAndCurrDates), nil
 }
 
@@ -59,6 +60,7 @@ func GetDayTeacherScheduleByDate(teacherName, date string) (*types.Day, error) {
 	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
+
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
@@ -92,6 +94,7 @@ func GetDayTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, er
 	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
+
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
@@ -101,6 +104,7 @@ func GetTextDayTeacherSchedule(teacherName string, daysAfterCurr int) (string, e
 	if err != nil {
 		return "", err
 	}
+
 	return convertDayTeacherScheduleToText(teacherName, *schedule, daysAfterCurr), nil
 }
 
@@ -116,6 +120,7 @@ func GetDayTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, e
 	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
+
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
@@ -157,6 +162,7 @@ func GetWeekTeacherSchedule(teacherName string, weekNum int) (*types.Week, error
 	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
+
 	return &schedule.Weeks[weekNum], nil
 }
 
@@ -198,7 +204,7 @@ func GetWeekTeacherScheduleImg(teacherName string, weekNum int) (string, error) 
 			x += cellWidth
 		}
 	}
-	dc.Stroke()
+
 	weekSchedulePath := fmt.Sprintf("week_schedule%d.png", getRandInt())
 	return weekSchedulePath, dc.SavePNG(weekSchedulePath)
 }
@@ -281,12 +287,13 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 			}
 		})
 	}
+
 	return teacherSchedule, nil
 }
 
 // convertDayTeacherScheduleToText converts the information that types.Day contains into text.
 func convertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, daysAfterCurr int) string {
-	var result strings.Builder
+	result := strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
@@ -329,7 +336,7 @@ func convertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, 
 
 // getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
 func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection) *types.Lesson {
-	lesson := new(types.Lesson)
+	lesson := types.Lesson{}
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info
 	if !strings.HasPrefix(tableCellHTML, "_") && tableCellHTML != "" {
@@ -339,10 +346,10 @@ func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection
 		lesson.SubLessons = make([]types.SubLesson, 0, len(lessonGroups))
 		lessonTypeAndName := strings.Split(splitLessonInfoHTML[1], ".")
 		lessonType := determineLessonType(lessonTypeAndName[0])
-		r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ")
+		r := strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ") // TODO: вынести в самый верх, чтобы постоянно его не создавать (см. пример groups.go)
 		lessonName := r.Replace(strings.TrimSpace(lessonTypeAndName[len(lessonTypeAndName)-1]))
 		for _, groupName := range lessonGroups {
-			r = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
+			r = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-") // TODO: вынести в самый верх, чтобы постоянного его не создавать (см. пример groups.go)
 			groupLesson := types.SubLesson{
 				Duration: types.Duration(lessonIdx),
 				Type:     lessonType,
@@ -354,7 +361,8 @@ func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection
 			lesson.SubLessons = append(lesson.SubLessons, groupLesson)
 		}
 	}
-	return lesson
+
+	return &lesson
 }
 
 // getTeacherURL returns the url to the teacher's schedule on UlSTU site.
@@ -388,6 +396,7 @@ func getTeacherURL(teacherName string) (string, error) {
 			return "", &types.IncorrectLinkError{Name: teacherName, NameFromURL: teacherNameFromDoc}
 		}
 	}
+
 	return teacherURL, nil
 }
 
@@ -398,6 +407,7 @@ func GetTeachers() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	doc.Find("td").Each(func(i int, s *goquery.Selection) {
 		if i > 0 {
 			foundTeacherName := s.Find("font").Text()
@@ -405,5 +415,6 @@ func GetTeachers() ([]string, error) {
 			teachers = append(teachers, formattedTeacherName)
 		}
 	})
+
 	return teachers, nil
 }
