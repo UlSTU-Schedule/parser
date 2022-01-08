@@ -108,25 +108,25 @@ func convertWeekDayToWeekDayIdx(weekDay string) int {
 
 // getWeekAndWeekDayNumbersByDate returns the number of the school week (0 or 1) and the number of the day of the
 // school week (0, ..., 6) by the string representation of the date.
-func getWeekAndWeekDayNumbersByDate(date string) (int, int, error) {
+func getWeekAndWeekDayNumbersByDate(date string) (weekNum int, weekDayNum int, err error) {
 	dateTime, err := getDateTime(date)
 	if err != nil {
-		return 0, 0, err
+		return
 	}
-	weekNum, weekDayNum := getWeekAndWeekDayNumbersByTime(dateTime)
-	return weekNum, weekDayNum, nil
+	weekNum, weekDayNum = getWeekAndWeekDayNumbersByTime(dateTime)
+	return
 }
 
 // getWeekAndWeekDayNumbersByTime returns the number of the school week (0 or 1) and the number of the day of the
 // school week (0, ..., 6) by time.
-func getWeekAndWeekDayNumbersByTime(time time.Time) (int, int) {
-	weekDayNum := int(time.Weekday()) - 1
+func getWeekAndWeekDayNumbersByTime(time time.Time) (weekNum int, weekDayNum int) {
+	weekDayNum = int(time.Weekday()) - 1
 	if weekDayNum == -1 {
 		weekDayNum = 6
 	}
 	_, currWeekNumWithDelta := time.ISOWeek()
-	weekNum := (currWeekNumWithDelta + 1) % 2
-	return weekNum, weekDayNum
+	weekNum = (currWeekNumWithDelta + 1) % 2
+	return
 }
 
 // getDateTime returns time.Time object from the string representation of the date.
@@ -140,23 +140,22 @@ func getDateTime(date string) (time.Time, error) {
 
 // getDayMonthYearByDate returns the day, month, and year extracted from the string representation of the date (Date
 // format: dd.mm). The year is considered equal to the current one.
-func getDayMonthYearByDate(date string) (int, int, int, error) {
-	year := time.Now().Year()
+func getDayMonthYearByDate(date string) (day int, month int, year int, err error) {
+	year = time.Now().Year()
 	dateWithYear := fmt.Sprintf("%s.%d", date, year)
 	if isDateExist(dateWithYear) {
 		dateArray := strings.Split(date, ".")
-		day, _ := strconv.Atoi(dateArray[0])
-		month, _ := strconv.Atoi(dateArray[1])
-		return day, month, year, nil
+		day, _ = strconv.Atoi(dateArray[0])
+		month, _ = strconv.Atoi(dateArray[1])
 	} else {
-		return 0, 0, 0, &types.IncorrectDateError{Date: date}
+		err = &types.IncorrectDateError{Date: date}
 	}
+	return
 }
 
 // isDateExist checks if the date matches the format "dd.mm" and exists.
 func isDateExist(date string) bool {
-	_, err := time.Parse("02.01.2006", date)
-	if err != nil {
+	if _, err := time.Parse("02.01.2006", date); err != nil {
 		return false
 	}
 	return true
