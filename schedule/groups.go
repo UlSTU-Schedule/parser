@@ -588,7 +588,7 @@ func getGroupScheduleURL(groupName string) (string, error) {
 	return groupURL, nil
 }
 
-// GetGroups returns all available group names from UlSTU site.
+// GetGroups returns all available group names and their part numbers from UlSTU site.
 func GetGroups() map[string]int {
 	groups := make(map[string]int)
 
