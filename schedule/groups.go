@@ -547,7 +547,7 @@ func getGroupScheduleURL(groupName string) (string, error) {
 	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
 		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
 		if err != nil {
-			return "", err
+			continue
 		}
 
 		doc.Find("td").EachWithBreak(func(i int, s *goquery.Selection) bool {
@@ -588,9 +588,10 @@ func getGroupScheduleURL(groupName string) (string, error) {
 	return groupURL, nil
 }
 
-// GetGroups returns all available group names and their part numbers from UlSTU site.
-func GetGroups() map[string]int {
-	groups := make(map[string]int)
+// GetGroups returns all available group names from UlSTU site.
+func GetGroups() []string {
+	// there cannot be more than 400 groups
+	groups := make([]string, 0, 400)
 
 	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
 		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
@@ -604,10 +605,10 @@ func GetGroups() map[string]int {
 				if strings.Contains(foundGroupName, ", ") {
 					foundGroupNames := strings.Split(foundGroupName, ", ")
 					for _, foundGroupName = range foundGroupNames {
-						groups[foundGroupName] = schedulePartNum
+						groups = append(groups, foundGroupName)
 					}
 				} else {
-					groups[foundGroupName] = schedulePartNum
+					groups = append(groups, foundGroupName)
 				}
 			}
 		})
