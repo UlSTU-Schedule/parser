@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -171,6 +172,24 @@ func isWeekScheduleEmpty(week types.Week) bool {
 		}
 	}
 	return true
+}
+
+// isFullScheduleEmpty returns true if the full schedule is empty, otherwise - false.
+func isFullScheduleEmpty(s *types.Schedule) bool {
+	wg := &sync.WaitGroup{}
+	inResultsEmptyCheck := make(chan bool, 2)
+
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(weekNum int, wg *sync.WaitGroup, out chan bool) {
+			defer wg.Done()
+			out <- isWeekScheduleEmpty(s.Weeks[weekNum])
+		}(i, wg, inResultsEmptyCheck)
+	}
+
+	wg.Wait()
+
+	return <-inResultsEmptyCheck && <-inResultsEmptyCheck
 }
 
 // getRandInt returns a non-negative pseudo-random int.
