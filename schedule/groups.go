@@ -489,8 +489,12 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 		})
-
 	}
+
+	if isFullScheduleEmpty(groupSchedule) {
+		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
+	}
+
 	return groupSchedule, nil
 }
 
