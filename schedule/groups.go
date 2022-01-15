@@ -77,7 +77,7 @@ func ParseDayGroupScheduleByDate(schedule *types.Schedule, groupName string, dat
 		return nil, err
 	}
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum, WeekDayNum: weekDayNum}
 	}
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
@@ -116,7 +116,7 @@ func GetDayGroupScheduleByWeekDay(groupName, weekDay string) (*types.Day, error)
 func ParseDayGroupScheduleByWeekDay(schedule *types.Schedule, groupName string, weekDay string) (*types.Day, error) {
 	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum, WeekDayNum: weekDayNum}
 	}
 
@@ -149,7 +149,7 @@ func GetDayGroupSchedule(groupName string, daysAfterCurr int) (*types.Day, error
 func ParseDayGroupSchedule(schedule *types.Schedule, groupName string, daysAfterCurr int) (*types.Day, error) {
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum, WeekDayNum: weekDayNum}
 	}
 
@@ -418,7 +418,7 @@ func ParseWeekGroupSchedule(schedule *types.Schedule, groupName string, weekNum 
 		return nil, &types.IncorrectWeekNumberError{WeekNum: weekNum}
 	}
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: weekNum, WeekDayNum: -1}
 	}
 
@@ -491,7 +491,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		})
 	}
 
-	if isFullScheduleEmpty(groupSchedule) {
+	if IsFullScheduleEmpty(groupSchedule) {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
 	}
 

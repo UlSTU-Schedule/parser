@@ -57,7 +57,7 @@ func GetDayTeacherScheduleByDate(teacherName, date string) (*types.Day, error) {
 		return nil, err
 	}
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 
@@ -91,7 +91,7 @@ func GetDayTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, er
 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 
@@ -117,7 +117,7 @@ func GetDayTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, e
 
 	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 
@@ -159,7 +159,7 @@ func GetWeekTeacherSchedule(teacherName string, weekNum int) (*types.Week, error
 		return nil, err
 	}
 
-	if isWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
 	}
 

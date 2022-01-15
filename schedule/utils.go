@@ -162,8 +162,8 @@ func isDateExist(date string) bool {
 	return true
 }
 
-// isWeekScheduleEmpty returns true if the week schedule is empty, otherwise - false.
-func isWeekScheduleEmpty(week types.Week) bool {
+// IsWeekScheduleEmpty returns true if the week schedule is empty, otherwise - false.
+func IsWeekScheduleEmpty(week types.Week) bool {
 	for _, d := range week.Days {
 		for _, l := range d.Lessons {
 			if l.SubLessons != nil {
@@ -174,8 +174,8 @@ func isWeekScheduleEmpty(week types.Week) bool {
 	return true
 }
 
-// isFullScheduleEmpty returns true if the full schedule is empty, otherwise - false.
-func isFullScheduleEmpty(s *types.Schedule) bool {
+// IsFullScheduleEmpty returns true if the full schedule is empty, otherwise - false.
+func IsFullScheduleEmpty(s *types.Schedule) bool {
 	wg := &sync.WaitGroup{}
 	inResultsEmptyCheck := make(chan bool, 2)
 
@@ -183,7 +183,7 @@ func isFullScheduleEmpty(s *types.Schedule) bool {
 		wg.Add(1)
 		go func(weekNum int, wg *sync.WaitGroup, out chan bool) {
 			defer wg.Done()
-			out <- isWeekScheduleEmpty(s.Weeks[weekNum])
+			out <- IsWeekScheduleEmpty(s.Weeks[weekNum])
 		}(i, wg, inResultsEmptyCheck)
 	}
 
