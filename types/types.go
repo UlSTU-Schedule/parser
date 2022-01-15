@@ -8,12 +8,12 @@ import (
 )
 
 // Schedule represents the full schedule that contains two school Weeks.
+//easyjson:json
 type Schedule struct {
 	Weeks [2]Week `json:"weeks"`
 }
 
 // Week represents the school week (one of two schedule tables) that contains six Days (without Sunday).
-//easyjson:json
 type Week struct {
 	Days [7]Day `json:"days"`
 }
