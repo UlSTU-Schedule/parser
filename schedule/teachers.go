@@ -173,6 +173,11 @@ func GetWeekTeacherScheduleImg(teacherName string, weekNum int) (string, error) 
 		return "", err
 	}
 
+	return ParseTeacherWeekSchedule(schedule, teacherName, weekNum)
+}
+
+// ParseTeacherWeekSchedule return path on img of schedule
+func ParseTeacherWeekSchedule(schedule *types.Week, teacherName string, weekNum int) (string, error) {
 	// loads an template of an empty table that will be filled in pairs
 	tableImg := getWeekScheduleTmplImg(weekScheduleTeacherTemp)
 	dc := gg.NewContextForImage(tableImg)
