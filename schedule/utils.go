@@ -10,6 +10,8 @@ import (
 	"github.com/ulstu-schedule/parser/types"
 	"golang.org/x/text/encoding/charmap"
 	"image"
+	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -37,11 +39,16 @@ var weekDays = [7]string{"Понедельник", "Вторник", "Среда
 // getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
 	response, err := http.Get(URL)
-	if response != nil {
-		defer response.Body.Close()
-	}
 	if err != nil {
 		return nil, err
+	}
+	if response != nil {
+		defer func(Body io.ReadCloser) {
+			err = Body.Close()
+			if err != nil {
+				log.Printf("error occured while closing response body: %s", err.Error())
+			}
+		}(response.Body)
 	}
 	if response.StatusCode > 299 {
 		return nil, &types.StatusCodeError{StatusCode: response.StatusCode, StatusText: http.StatusText(response.StatusCode)}
