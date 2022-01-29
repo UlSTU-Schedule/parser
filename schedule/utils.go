@@ -42,14 +42,13 @@ func getDocFromURL(URL string) (*goquery.Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	if response != nil {
-		defer func(Body io.ReadCloser) {
-			err = Body.Close()
-			if err != nil {
-				log.Printf("error occured while closing response body: %s", err.Error())
-			}
-		}(response.Body)
-	}
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			log.Printf("error occured while closing response body: %s", err.Error())
+		}
+	}(response.Body)
+
 	if response.StatusCode > 299 {
 		return nil, &types.StatusCodeError{StatusCode: response.StatusCode, StatusText: http.StatusText(response.StatusCode)}
 	}
