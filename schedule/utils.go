@@ -73,15 +73,26 @@ func determineLessonType(lessonType string) types.LessonType {
 	}
 }
 
-// getWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
-func getWeekAndWeekDayNumbersByWeekDay(weekDay string) (int, int) {
-	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+// GetWeekAndWeekDayNumbersByDate returns the number of the school week (0 or 1) and the number of the day of the
+// school week (0, ..., 6) by the string representation of the date.
+func GetWeekAndWeekDayNumbersByDate(date string) (weekNum int, weekDayNum int, err error) {
+	dateTime, err := getDateTime(date)
+	if err != nil {
+		return
+	}
+	weekNum, weekDayNum = getWeekAndWeekDayNumbersByTime(dateTime)
+	return
+}
+
+// GetWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
+func GetWeekAndWeekDayNumbersByWeekDay(weekDay string) (int, int) {
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
 	weekDayNum := convertWeekDayToWeekDayIdx(weekDay)
 	return currWeekNum, weekDayNum
 }
 
-// getWeekAndWeekDayNumbers increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
-func getWeekAndWeekDayNumbers(additionalDays int) (int, int) {
+// GetWeekAndWeekDayNumbers increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
+func GetWeekAndWeekDayNumbers(additionalDays int) (int, int) {
 	// getting the current time and adding additionalDays days to it
 	currTimeWithDelta := time.Now().AddDate(0, 0, additionalDays)
 	return getWeekAndWeekDayNumbersByTime(currTimeWithDelta)
@@ -111,17 +122,6 @@ func convertWeekDayToWeekDayIdx(weekDay string) int {
 	default:
 		return 6
 	}
-}
-
-// getWeekAndWeekDayNumbersByDate returns the number of the school week (0 or 1) and the number of the day of the
-// school week (0, ..., 6) by the string representation of the date.
-func getWeekAndWeekDayNumbersByDate(date string) (weekNum int, weekDayNum int, err error) {
-	dateTime, err := getDateTime(date)
-	if err != nil {
-		return
-	}
-	weekNum, weekDayNum = getWeekAndWeekDayNumbersByTime(dateTime)
-	return
 }
 
 // getWeekAndWeekDayNumbersByTime returns the number of the school week (0 or 1) and the number of the day of the

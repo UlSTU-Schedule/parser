@@ -52,7 +52,7 @@ func GetDayTeacherScheduleByDate(teacherName, date string) (*types.Day, error) {
 		return nil, err
 	}
 
-	weekNum, weekDayNum, err := getWeekAndWeekDayNumbersByDate(date)
+	weekNum, weekDayNum, err := GetWeekAndWeekDayNumbersByDate(date)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func GetDayTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, er
 		return nil, err
 	}
 
-	weekNum, weekDayNum := getWeekAndWeekDayNumbersByWeekDay(weekDay)
+	weekNum, weekDayNum := GetWeekAndWeekDayNumbersByWeekDay(weekDay)
 
 	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
@@ -115,7 +115,7 @@ func GetDayTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, e
 		return nil, err
 	}
 
-	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
+	weekNum, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
 
 	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: teacherName, WeekNum: weekNum}
@@ -126,25 +126,25 @@ func GetDayTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, e
 
 // GetCurrWeekTeacherScheduleImg return img of current week schedule
 func GetCurrWeekTeacherScheduleImg(teacherName string) (string, error) {
-	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
 	return GetWeekTeacherScheduleImg(teacherName, currWeekNum)
 }
 
 // GetNextWeekTeacherScheduleImg return img of next week schedule
 func GetNextWeekTeacherScheduleImg(teacherName string) (string, error) {
-	currWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(7)
 	return GetWeekTeacherScheduleImg(teacherName, currWeekNum)
 }
 
 // GetCurrWeekTeacherSchedule return object of current week schedule
 func GetCurrWeekTeacherSchedule(teacherName string) (*types.Week, error) {
-	currWeekNum, _ := getWeekAndWeekDayNumbers(0)
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
 	return GetWeekTeacherSchedule(teacherName, currWeekNum)
 }
 
 // GetNextWeekTeacherSchedule return object of next week schedule
 func GetNextWeekTeacherSchedule(teacherName string) (*types.Week, error) {
-	nextWeekNum, _ := getWeekAndWeekDayNumbers(7)
+	nextWeekNum, _ := GetWeekAndWeekDayNumbers(7)
 	return GetWeekTeacherSchedule(teacherName, nextWeekNum)
 }
 
@@ -189,7 +189,7 @@ func ParseTeacherWeekSchedule(schedule *types.Week, teacherName string, weekNum 
 
 	setDefaultSettings(dc)
 
-	currWeekNum, currWeekDayNum := getWeekAndWeekDayNumbers(0)
+	currWeekNum, currWeekDayNum := GetWeekAndWeekDayNumbers(0)
 
 	for row := 352; row < imgHeight; row += cellHeight {
 		rowNum := row/cellHeight - 2
@@ -301,7 +301,7 @@ func convertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, 
 	result := strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)
-	weekNum, weekDayNum := getWeekAndWeekDayNumbers(daysAfterCurr)
+	weekNum, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
 
 	switch daysAfterCurr {
 	case 0:
