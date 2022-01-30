@@ -548,7 +548,7 @@ func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reF
 func getGroupScheduleURL(groupName string) (string, error) {
 	groupURL := ""
 
-	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
+	for schedulePartNum := 1; schedulePartNum < 5; schedulePartNum++ {
 		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
 		if err != nil {
 			continue
@@ -597,7 +597,7 @@ func GetGroups() []string {
 	// there cannot be more than 400 groups
 	groups := make([]string, 0, 400)
 
-	for schedulePartNum := 1; schedulePartNum < 4; schedulePartNum++ {
+	for schedulePartNum := 1; schedulePartNum < 5; schedulePartNum++ {
 		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
 		if err != nil {
 			continue
