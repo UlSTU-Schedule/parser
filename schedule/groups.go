@@ -555,8 +555,8 @@ func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reF
 func getGroupScheduleURL(groupName string) (string, error) {
 	groupURL := ""
 
-	for _, url := range groupScheduleURLs {
-		doc, err := getDocFromURL(url + "/raspisan.html")
+	for _, scheduleURL := range groupScheduleURLs {
+		doc, err := getDocFromURL(scheduleURL + "/raspisan.html")
 		if err != nil {
 			continue
 		}
@@ -569,13 +569,13 @@ func getGroupScheduleURL(groupName string) (string, error) {
 					for _, foundGroupName = range foundGroupNames {
 						if foundGroupName == groupName {
 							href, _ := s.Find("a").Attr("href")
-							groupURL = url + "/" + href
+							groupURL = scheduleURL + "/" + href
 							return false
 						}
 					}
 				} else if foundGroupName == groupName {
 					href, _ := s.Find("a").Attr("href")
-					groupURL = url + "/" + href
+					groupURL = scheduleURL + "/" + href
 					return false
 				}
 			}
@@ -604,8 +604,8 @@ func GetGroups() []string {
 	// there cannot be more than 400 groups
 	groups := make([]string, 0, 400)
 
-	for _, url := range groupScheduleURLs {
-		doc, err := getDocFromURL(url + "/raspisan.html")
+	for _, scheduleURL := range groupScheduleURLs {
+		doc, err := getDocFromURL(scheduleURL + "/raspisan.html")
 		if err != nil {
 			continue
 		}
