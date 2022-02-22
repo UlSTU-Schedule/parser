@@ -16,7 +16,7 @@ import (
 
 const (
 	teacherPattern = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
-	roomPattern    = `(\d.*[-_].+)|(\d)`
+	roomPattern    = `(\d.*[-_].+)|(\d)|(([А-Я]+-)+\d+)`
 
 	headingTableGroupFontSize = 42
 )
