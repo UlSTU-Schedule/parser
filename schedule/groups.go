@@ -6,6 +6,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,12 +15,18 @@ import (
 )
 
 const (
-	groupScheduleURLPattern = "https://old.ulstu.ru/schedule/students/part%d/%s"
-	teacherPattern          = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
-	roomPattern             = `(\d.*[-_].+)|(\d)`
+	teacherPattern = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7}|)`
+	roomPattern    = `(\d.*[-_].+)|(\d)`
 
 	headingTableGroupFontSize = 42
 )
+
+var groupScheduleURLs = [4]string{
+	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 1 – РТФ, ЭФ, ИЭФ, ИФМИ"), "+", "%20", -1),
+	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 2 – ФИСТ, СФ, ГФ"), "+", "%20", -1),
+	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 3 – МФ, КЭИ"), "+", "%20", -1),
+	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 4 – ИАТУ, очно-заочная, заочная формы обучения"), "+", "%20", -1),
+}
 
 var (
 	findTeacherAndRoom = regexp.MustCompile(fmt.Sprintf(`^%s %s$`, teacherPattern, roomPattern))
@@ -548,8 +555,8 @@ func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reF
 func getGroupScheduleURL(groupName string) (string, error) {
 	groupURL := ""
 
-	for schedulePartNum := 1; schedulePartNum < 5; schedulePartNum++ {
-		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
+	for _, url := range groupScheduleURLs {
+		doc, err := getDocFromURL(url + "/raspisan.html")
 		if err != nil {
 			continue
 		}
@@ -562,13 +569,13 @@ func getGroupScheduleURL(groupName string) (string, error) {
 					for _, foundGroupName = range foundGroupNames {
 						if foundGroupName == groupName {
 							href, _ := s.Find("a").Attr("href")
-							groupURL = fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, href)
+							groupURL = url + "/" + href
 							return false
 						}
 					}
 				} else if foundGroupName == groupName {
 					href, _ := s.Find("a").Attr("href")
-					groupURL = fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, href)
+					groupURL = url + "/" + href
 					return false
 				}
 			}
@@ -597,8 +604,8 @@ func GetGroups() []string {
 	// there cannot be more than 400 groups
 	groups := make([]string, 0, 400)
 
-	for schedulePartNum := 1; schedulePartNum < 5; schedulePartNum++ {
-		doc, err := getDocFromURL(fmt.Sprintf(groupScheduleURLPattern, schedulePartNum, "raspisan.html"))
+	for _, url := range groupScheduleURLs {
+		doc, err := getDocFromURL(url + "/raspisan.html")
 		if err != nil {
 			continue
 		}
