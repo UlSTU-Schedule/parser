@@ -484,6 +484,10 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		// we have one school week schedule
 		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
 		weekNum, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
+		// handling unusual week number (e.g. 3)
+		if weekNum < 0 || weekNum > 1 {
+			return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
+		}
 
 		pSelection.Each(func(i int, s *goquery.Selection) {
 			iMod10 := i % 10
