@@ -110,8 +110,6 @@ func easyjson6601e8cdDecodeGithubComUlstuScheduleParserTypes1(in *jlexer.Lexer, 
 			continue
 		}
 		switch key {
-		case "number":
-			out.Number = int(in.Int())
 		case "days":
 			if in.IsNull() {
 				in.Skip()
@@ -144,13 +142,8 @@ func easyjson6601e8cdEncodeGithubComUlstuScheduleParserTypes1(out *jwriter.Write
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"number\":"
-		out.RawString(prefix[1:])
-		out.Int(int(in.Number))
-	}
-	{
 		const prefix string = ",\"days\":"
-		out.RawString(prefix)
+		out.RawString(prefix[1:])
 		out.RawByte('[')
 		for v4 := range in.Days {
 			if v4 > 0 {
@@ -181,8 +174,6 @@ func easyjson6601e8cdDecodeGithubComUlstuScheduleParserTypes2(in *jlexer.Lexer, 
 			continue
 		}
 		switch key {
-		case "week_number":
-			out.WeekNumber = int(in.Int())
 		case "lessons":
 			if in.IsNull() {
 				in.Skip()
@@ -215,13 +206,8 @@ func easyjson6601e8cdEncodeGithubComUlstuScheduleParserTypes2(out *jwriter.Write
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"week_number\":"
-		out.RawString(prefix[1:])
-		out.Int(int(in.WeekNumber))
-	}
-	{
 		const prefix string = ",\"lessons\":"
-		out.RawString(prefix)
+		out.RawString(prefix[1:])
 		out.RawByte('[')
 		for v6 := range in.Lessons {
 			if v6 > 0 {

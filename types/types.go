@@ -13,16 +13,14 @@ type Schedule struct {
 	Weeks [2]Week `json:"weeks"`
 }
 
-// Week represents the school week (one of two schedule tables) that contains seventh Days.
+// Week represents the school week (one of two schedule tables) that contains six Days (without Sunday).
 type Week struct {
-	Number int    `json:"number"`
-	Days   [7]Day `json:"days"`
+	Days [7]Day `json:"days"`
 }
 
 // Day represents the school day (the row in the schedule table) that contains eight Lessons.
 type Day struct {
-	WeekNumber int       `json:"week_number"`
-	Lessons    [8]Lesson `json:"lessons"`
+	Lessons [8]Lesson `json:"lessons"`
 }
 
 // Lesson represents the lesson (the cell in the schedule table) that can contain one or more SubLessons.
