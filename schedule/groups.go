@@ -192,18 +192,18 @@ func ConvertDayGroupScheduleToText(daySchedule *types.Day, groupName string, day
 	sb := &strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)
-	weekNum, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
+	_, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
 
 	switch daysAfterCurr {
 	case 0:
 		_, _ = fmt.Fprintf(sb, "Расписание %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n", groupName,
-			weekDays[weekDayNum], dateStr, weekNum+1)
+			weekDays[weekDayNum], dateStr, daySchedule.WeekNumber)
 	case 1:
 		_, _ = fmt.Fprintf(sb, "Расписание %s на завтра (%s, %s, %d-ая учебная неделя):\n\n", groupName,
-			weekDays[weekDayNum], dateStr, weekNum+1)
+			weekDays[weekDayNum], dateStr, daySchedule.WeekNumber)
 	default:
 		_, _ = fmt.Fprintf(sb, "Расписание %s на %s (%s, %d-ая учебная неделя):\n\n", groupName,
-			dateStr, weekDays[weekDayNum], weekNum+1)
+			dateStr, weekDays[weekDayNum], daySchedule.WeekNumber)
 	}
 
 	noLessons := true
@@ -275,7 +275,7 @@ func GetImgByWeekGroupSchedule(schedule *types.Week, groupName string, weekNum i
 	// writes the group name and the school week number
 	dc.SetRGB255(25, 89, 209)
 	dc.DrawString(groupName, 575, 60)
-	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)
+	dc.DrawString(fmt.Sprintf("%d-ая", schedule.Number), imgWidth-105, 60)
 
 	setDefaultSettings(dc)
 
@@ -473,17 +473,17 @@ func ParseWeekGroupSchedule(schedule *types.Schedule, groupName string, weekNum,
 
 // GetFullGroupSchedule returns the full group's schedule.
 func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
-	url, err := getGroupScheduleURL(groupName)
+	groupScheduleURL, err := getGroupScheduleURL(groupName)
 	if err != nil {
 		return nil, err
 	}
 
 	// this group is not on the website with a schedule (the group does not exist or the schedule has not been loaded yet)
-	if url == "" {
+	if groupScheduleURL == "" {
 		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
 	}
 
-	doc, err := getDocFromURL(url)
+	doc, err := getDocFromURL(groupScheduleURL)
 	if err != nil {
 		return nil, err
 	}
@@ -494,6 +494,14 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 
 	// we have schedule of two weeks
 	if pSelection.Length() == 182 {
+		firstWeekNumStr := pSelection.Get(0).LastChild.LastChild.Data
+		firstWeekNumDisplay, _ := strconv.Atoi(string(strings.Split(firstWeekNumStr, ": ")[1][0]))
+		groupSchedule.Weeks[0].Number = firstWeekNumDisplay
+
+		secondWeekNumStr := pSelection.Get(91).LastChild.LastChild.Data
+		secondWeekNumDisplay, _ := strconv.Atoi(string(strings.Split(secondWeekNumStr, ": ")[1][0]))
+		groupSchedule.Weeks[1].Number = secondWeekNumDisplay
+
 		pSelection.Each(func(i int, s *goquery.Selection) {
 			iMod10 := i % 10
 			iDiv10 := i / 10
@@ -502,6 +510,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 				dayIdx := iDiv10 - 2
 				lessonIdx := iMod10 - 2
+				groupSchedule.Weeks[0].Days[dayIdx].WeekNumber = firstWeekNumDisplay
 				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
@@ -515,6 +524,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 					lessonIdx = iMod10 - 3
 					dayIdx = iDiv10 - 11
 				}
+				groupSchedule.Weeks[1].Days[dayIdx].WeekNumber = secondWeekNumDisplay
 				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
@@ -522,11 +532,10 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 	} else {
 		// we have one school week schedule
 		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
-		weekNum, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
-		// handling unusual week number (e.g. 3)
-		if weekNum < 0 || weekNum > 1 {
-			return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
-		}
+		weekNumDisplay, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
+		weekNum := (weekNumDisplay + 1) % 2
+
+		groupSchedule.Weeks[weekNum].Number = weekNumDisplay
 
 		pSelection.Each(func(i int, s *goquery.Selection) {
 			iMod10 := i % 10
@@ -535,7 +544,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
 				dayIdx := iDiv10 - 2
 				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
+				groupSchedule.Weeks[weekNum].Days[dayIdx].WeekNumber = weekNumDisplay
+				groupSchedule.Weeks[weekNum].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
 					findTeacherAndRoom, findTeacher, findRoom, s)
 			}
 		})
