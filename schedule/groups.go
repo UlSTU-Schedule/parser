@@ -25,10 +25,10 @@ const (
 )
 
 var groupScheduleURLs = [4]string{
-	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 1 – РТФ, ЭФ, ИЭФ, ИФМИ"), "+", "%20", -1),
+	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 1 – РТФ, ЭФ, ИЭФ (очная, очно-заочная формы обучения), ИФМИ, ЗВФ ИННО (очно-заочная форма обучения)"), "+", "%20", -1),
 	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 2 – ФИСТ, СФ, ГФ"), "+", "%20", -1),
 	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 3 – МФ, КЭИ"), "+", "%20", -1),
-	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 4 – ИАТУ, очно-заочная, заочная формы обучения"), "+", "%20", -1),
+	strings.Replace("https://lk.ulstu.ru/timetable/shared/schedule/"+url.QueryEscape("Часть 4 – ИАТУ, ИЭФ (заочная форма обучения), ЗВФ ИННО (заочная форма обучения)"), "+", "%20", -1),
 }
 
 var (
