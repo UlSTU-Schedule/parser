@@ -494,12 +494,12 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 
 	// we have schedule of two weeks
 	if pSelection.Length() == 182 {
-		firstWeekNumStr := pSelection.Get(0).LastChild.LastChild.Data
-		firstWeekNumDisplay, _ := strconv.Atoi(string(strings.Split(firstWeekNumStr, ": ")[1][0]))
+		firstWeekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
+		firstWeekNumDisplay, _ := strconv.Atoi(strings.Split(firstWeekNumStr, "-")[0])
 		groupSchedule.Weeks[0].Number = firstWeekNumDisplay
 
-		secondWeekNumStr := pSelection.Get(91).LastChild.LastChild.Data
-		secondWeekNumDisplay, _ := strconv.Atoi(string(strings.Split(secondWeekNumStr, ": ")[1][0]))
+		secondWeekNumStr := strings.Split(pSelection.Get(91).LastChild.LastChild.Data, ": ")[1]
+		secondWeekNumDisplay, _ := strconv.Atoi(strings.Split(secondWeekNumStr, "-")[0])
 		groupSchedule.Weeks[1].Number = secondWeekNumDisplay
 
 		pSelection.Each(func(i int, s *goquery.Selection) {
@@ -531,8 +531,8 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		})
 	} else {
 		// we have one school week schedule
-		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
-		weekNumDisplay, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
+		weekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
+		weekNumDisplay, _ := strconv.Atoi(strings.Split(weekNumStr, "-")[0])
 		weekNum := (weekNumDisplay + 1) % 2
 
 		groupSchedule.Weeks[weekNum].Number = weekNumDisplay
