@@ -4,11 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/fogleman/gg"
-	"github.com/golang/freetype/truetype"
-	"github.com/ulstu-schedule/parser/types"
-	"golang.org/x/text/encoding/charmap"
 	"image"
 	"io"
 	"log"
@@ -18,6 +13,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
+	"golang.org/x/text/encoding/charmap"
+
+	"github.com/ulstu-schedule/parser/types"
 )
 
 const (
@@ -38,7 +40,12 @@ var weekDays = [7]string{"Понедельник", "Вторник", "Среда
 
 // getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
-	response, err := http.Get(URL)
+	req, err := http.NewRequest(http.MethodGet, URL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +56,11 @@ func getDocFromURL(URL string) (*goquery.Document, error) {
 		}
 	}(response.Body)
 
-	if response.StatusCode > 299 {
-		return nil, &types.StatusCodeError{StatusCode: response.StatusCode, StatusText: http.StatusText(response.StatusCode)}
+	if response.StatusCode >= 300 {
+		return nil, &types.StatusCodeError{
+			StatusCode: response.StatusCode,
+			StatusText: http.StatusText(response.StatusCode),
+		}
 	}
 
 	// convert from windows-1251 to utf-8
