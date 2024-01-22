@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	teacherScheduleURL          = "https://old.ulstu.ru/schedule/teachers/%s"
+	teacherScheduleURL          = "https://lk.ulstu.ru/timetable/shared/teachers/%s"
 	headingTableTeacherFontSize = 38
 )
 
