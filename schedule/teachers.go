@@ -41,7 +41,7 @@ func GetTextDayTeacherScheduleByDate(teacherName, inputDate string) (string, err
 		diffBetweenInputAndCurrDates++
 	}
 
-	return convertDayTeacherScheduleToText(teacherName, *schedule, diffBetweenInputAndCurrDates), nil
+	return ConvertDayTeacherScheduleToText(teacherName, *schedule, diffBetweenInputAndCurrDates), nil
 }
 
 // GetDayTeacherScheduleByDate returns *types.Day received from the full schedule based on the string representation
@@ -78,7 +78,7 @@ func GetTextDayTeacherScheduleByWeekDay(teacherName, weekDay string) (string, er
 	}
 	weekDayNum := convertWeekDayToWeekDayIdx(weekDay)
 
-	return convertDayTeacherScheduleToText(teacherName, *schedule, weekDayNum-weekDayNumNow), nil
+	return ConvertDayTeacherScheduleToText(teacherName, *schedule, weekDayNum-weekDayNumNow), nil
 }
 
 // GetDayTeacherScheduleByWeekDay returns *types.Day received from the full schedule based on the selected day of the
@@ -105,7 +105,7 @@ func GetTextDayTeacherSchedule(teacherName string, daysAfterCurr int) (string, e
 		return "", err
 	}
 
-	return convertDayTeacherScheduleToText(teacherName, *schedule, daysAfterCurr), nil
+	return ConvertDayTeacherScheduleToText(teacherName, *schedule, daysAfterCurr), nil
 }
 
 // GetDayTeacherSchedule returns *types.Day received from the full schedule regarding how many days have passed relative to the current time.
@@ -296,8 +296,8 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	return teacherSchedule, nil
 }
 
-// convertDayTeacherScheduleToText converts the information that types.Day contains into text.
-func convertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, daysAfterCurr int) string {
+// ConvertDayTeacherScheduleToText converts the information that types.Day contains into text.
+func ConvertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, daysAfterCurr int) string {
 	result := strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)

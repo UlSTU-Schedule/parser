@@ -30,6 +30,8 @@ const (
 
 	cellWidth  = 200
 	cellHeight = 150
+
+	magicWeekDelta = 5 // 5 or 34
 )
 
 //go:embed assets/Arial.ttf
