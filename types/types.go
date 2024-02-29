@@ -110,6 +110,14 @@ func (l Lesson) StringRoomLesson() string {
 	return ""
 }
 
+// ScheduleType is the type of the schedule
+type ScheduleType int
+
+const (
+	Group ScheduleType = iota
+	Teacher
+)
+
 // LessonType is the type of the lesson. Can take 3 values: Lecture, Laboratory and Practice.
 type LessonType int
 
@@ -117,10 +125,11 @@ const (
 	Lecture LessonType = iota
 	Laboratory
 	Practice
+	Unknown
 )
 
 func (lt LessonType) String() string {
-	return [...]string{"Лек.", "Лаб.", "Пр."}[lt]
+	return [...]string{"Лек.", "Лаб.", "Пр.", ""}[lt]
 }
 
 // Duration represents the lesson's duration.
@@ -142,6 +151,16 @@ type SubLesson struct {
 	Room     string     `json:"room"`
 	Practice string     `json:"practice"`
 	SubGroup string     `json:"sub_group"`
+}
+
+// StringGroup returns a string representation of SubLesson based on the structure of the lesson display for groups.
+func (sl SubLesson) StringGroup() string {
+	if sl.SubGroup != "" {
+		return fmt.Sprintf("%s, %s, аудитория %s",
+			sl.Teacher, sl.SubGroup, sl.Room)
+	}
+	return fmt.Sprintf("%s, аудитория %s",
+		sl.Teacher, sl.Room)
 }
 
 // StringGroupSubLesson returns a string representation of SubLesson based on the structure of the lesson display for groups.

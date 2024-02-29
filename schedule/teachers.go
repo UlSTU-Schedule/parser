@@ -6,7 +6,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -246,54 +245,7 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	doc, err := getDocFromURL(teacherURL)
-	if err != nil {
-		return nil, err
-	}
-
-	teacherSchedule := new(types.Schedule)
-
-	pSelection := doc.Find("p")
-
-	if pSelection.Length() == 182 {
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			// first week lessons
-			if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-				dayIdx := i/10 - 2
-				lessonIdx := i%10 - 2
-				teacherSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
-			}
-			// second week lessons
-			if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
-				var dayIdx, lessonIdx int
-				if i%10 == 0 {
-					lessonIdx = 7
-				} else {
-					lessonIdx = i%10 - 3
-				}
-				if i == 170 {
-					dayIdx = 5
-				} else {
-					dayIdx = (i/10)%10 - 1
-				}
-				teacherSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
-			}
-		})
-	} else {
-		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
-		weekNum, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
-
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-				dayIdx := i/10 - 2
-				lessonIdx := i%10 - 2
-				teacherSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
-			}
-		})
-	}
-
-	return teacherSchedule, nil
+	return GetFullSchedule(teacher, teacherURL, types.Teacher)
 }
 
 // ConvertDayTeacherScheduleToText converts the information that types.Day contains into text.
@@ -339,8 +291,8 @@ func ConvertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, 
 	return result.String()
 }
 
-// getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
-func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection) *types.Lesson {
+// parseTeacherLesson returns *types.Lesson received from the HTML document.
+func parseTeacherLesson(teacher string, lessonIdx int, s *goquery.Selection) *types.Lesson {
 	lesson := types.Lesson{}
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info

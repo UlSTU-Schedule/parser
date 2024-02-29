@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -16,9 +15,9 @@ import (
 )
 
 const (
-	teacherPattern  = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Преподаватели]{13} [каaфеeдры]{7})`
+	teacherPattern  = `([А-Яа-яё]+ [А-Я] [А-Я])|(АДП П.П.)|([Прpеeпоoдаaватели]{13} [каaфеeдры]{7})`
 	roomPattern     = `(\d.*[-_].+)|(\d)|(([А-Я]+-)+\d+)`
-	subgroup        = `\d п/г`
+	subgroupPattern = `\d п/г`
 	practicePattern = ` Предприятие`
 
 	headingTableGroupFontSize = 42
@@ -36,7 +35,7 @@ var (
 	findPractice       = regexp.MustCompile(fmt.Sprintf(`^%s$`, practicePattern))
 	findTeacher        = regexp.MustCompile(teacherPattern)
 	findRoom           = regexp.MustCompile(roomPattern)
-	findSubGroup       = regexp.MustCompile(subgroup)
+	findSubGroup       = regexp.MustCompile(subgroupPattern)
 
 	roomReplacer       = strings.NewReplacer(".", "", "_", "-", " - ", "-", " -", "-", "- ", "-")
 	afterSpecCharAdder = strings.NewReplacer(",", ", ", ".", ". ", "- ", " - ", " -", " - ", "&#34;", "'")
@@ -335,8 +334,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 					}
 				}
 				if !isTeacherInInfo {
-					subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
-						subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
+					subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroup()
 				}
 			} else {
 				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroupSubLesson()
@@ -356,8 +354,7 @@ func putLessonInTableCell(subLessons []types.SubLesson, cellX, cellY float64, dc
 			fLessonName := formatLessonNameToFitIntoCell(subLessons[subLessonIdx].Name)
 			// removes duplicate names of the sublessons
 			if subLessonIdx > 0 && strings.Contains(subLessonsStr[0], fLessonName) {
-				subLessonsStr[subLessonIdx] = fmt.Sprintf("%s, аудитория %s",
-					subLessons[subLessonIdx].Teacher, subLessons[subLessonIdx].Room)
+				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroup()
 			} else {
 				subLessons[subLessonIdx].Name = fLessonName
 				subLessonsStr[subLessonIdx] = subLessons[subLessonIdx].StringGroupSubLesson()
@@ -480,84 +477,7 @@ func GetFullGroupSchedule(groupName string) (*types.Schedule, error) {
 		return nil, err
 	}
 
-	// this group is not on the website with a schedule (the group does not exist or the schedule has not been loaded yet)
-	if groupScheduleURL == "" {
-		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
-	}
-
-	doc, err := getDocFromURL(groupScheduleURL)
-	if err != nil {
-		return nil, err
-	}
-
-	groupSchedule := &types.Schedule{}
-
-	pSelection := doc.Find("p")
-
-	// we have schedule of two weeks
-	if pSelection.Length() == 182 {
-		firstWeekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
-		firstWeekNumDisplay, _ := strconv.Atoi(strings.Split(firstWeekNumStr, "-")[0])
-		groupSchedule.Weeks[0].Number = firstWeekNumDisplay
-
-		secondWeekNumStr := strings.Split(pSelection.Get(91).LastChild.LastChild.Data, ": ")[1]
-		secondWeekNumDisplay, _ := strconv.Atoi(strings.Split(secondWeekNumStr, "-")[0])
-		groupSchedule.Weeks[1].Number = secondWeekNumDisplay
-
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			iMod10 := i % 10
-			iDiv10 := i / 10
-
-			// first week lessons
-			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
-				dayIdx := iDiv10 - 2
-				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[0].Days[dayIdx].WeekNumber = firstWeekNumDisplay
-				groupSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
-					findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
-			}
-			// second week lessons
-			if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
-				var lessonIdx, dayIdx int
-				if iMod10 == 0 {
-					lessonIdx = 7
-					dayIdx = iDiv10 - 12
-				} else {
-					lessonIdx = iMod10 - 3
-					dayIdx = iDiv10 - 11
-				}
-				groupSchedule.Weeks[1].Days[dayIdx].WeekNumber = secondWeekNumDisplay
-				groupSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
-					findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
-			}
-		})
-	} else {
-		// we have one school week schedule
-		weekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
-		weekNumDisplay, _ := strconv.Atoi(strings.Split(weekNumStr, "-")[0])
-		weekNum := (weekNumDisplay + 1) % 2
-
-		groupSchedule.Weeks[weekNum].Number = weekNumDisplay
-
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			iMod10 := i % 10
-			iDiv10 := i / 10
-
-			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
-				dayIdx := iDiv10 - 2
-				lessonIdx := iMod10 - 2
-				groupSchedule.Weeks[weekNum].Days[dayIdx].WeekNumber = weekNumDisplay
-				groupSchedule.Weeks[weekNum].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(groupName, lessonIdx,
-					findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
-			}
-		})
-	}
-
-	if IsFullScheduleEmpty(groupSchedule) {
-		return nil, &types.UnavailableScheduleError{Name: groupName, WeekNum: -1, WeekDayNum: -1}
-	}
-
-	return groupSchedule, nil
+	return GetFullSchedule(groupName, groupScheduleURL, types.Group)
 }
 
 // parseGroupLesson returns *types.Lesson received from the HTML table cell.
@@ -573,19 +493,25 @@ func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reF
 			// type of lessons that are located before teachers and rooms
 			subLessonType types.LessonType
 			// each lesson corresponds to 1 or more teachers and rooms that follow it
-			subLessonName string
+			subLessonName      string
+			subGroupLessonMain string
 		)
 		// <br/> separates the name of the lesson with the teacher and the audience number
 		splitLessonInfoHTML := strings.Split(tableCellHTML, " <br/>")
 		// if <br/> doesn't separate anything, so we do not take it into account
 		for j := 0; j < len(splitLessonInfoHTML)-1; j++ {
 			// if the row contains teacher and room
-			if j != 0 && reFindTeacherAndRoom.MatchString(splitLessonInfoHTML[j]) {
+			if j != 0 && reFindTeacher.MatchString(splitLessonInfoHTML[j]) && reFindRoom.MatchString(splitLessonInfoHTML[j]) {
 				subGroupLesson := reFindSubGroup.FindString(splitLessonInfoHTML[j])
 
 				lessonWithoutSubGroup := strings.ReplaceAll(splitLessonInfoHTML[j], subGroupLesson, "")
 
 				room := reFindRoom.FindString(lessonWithoutSubGroup)
+
+				if subGroupLesson == "" {
+					subGroupLesson = subGroupLessonMain
+					subGroupLessonMain = ""
+				}
 
 				lesson.SubLessons = append(lesson.SubLessons, types.SubLesson{
 					Duration: types.Duration(lessonIdx),
@@ -604,21 +530,46 @@ func parseGroupLesson(groupName string, lessonIdx int, reFindTeacherAndRoom, reF
 				})
 			} else {
 				if j == 0 {
-					subLessonTypeAndName := strings.Split(splitLessonInfoHTML[j], ".")
-					subLessonType = determineLessonType(subLessonTypeAndName[0])
-					subGroupLesson := reFindSubGroup.FindString(splitLessonInfoHTML[j])
-
-					// add spaces next to special characters (so that there are more hyphenation options when drawing)
-					subLessonNameReplaced := afterSpecCharAdder.Replace(strings.Join(subLessonTypeAndName[1:], "."))
-
-					subLessonName = strings.ReplaceAll(subLessonNameReplaced, "- "+subGroupLesson, "")
+					subLessonName, subGroupLessonMain, subLessonType = getLessonInfo(splitLessonInfoHTML[j], reFindSubGroup)
 				} else {
-					subLessonName = afterSpecCharAdder.Replace(splitLessonInfoHTML[j])
+					subLessonName, subGroupLessonMain = getLessonInfoWithoutType(splitLessonInfoHTML[j], reFindSubGroup)
 				}
 			}
 		}
 	}
 	return lesson
+}
+
+func getLessonInfo(lessonInfo string, reFindSubGroup *regexp.Regexp) (string, string, types.LessonType) {
+	subLessonTypeAndName := strings.Split(lessonInfo, ".")
+	subLessonType := determineLessonType(subLessonTypeAndName[0])
+	subGroupLesson := reFindSubGroup.FindString(lessonInfo)
+
+	// add spaces next to special characters (so that there are more hyphenation options when drawing)
+	subLessonNameReplaced := afterSpecCharAdder.Replace(strings.Join(subLessonTypeAndName[1:], "."))
+
+	subLessonName := getSubLessonName(subLessonNameReplaced, subGroupLesson)
+
+	return subLessonName, subGroupLesson, subLessonType
+}
+
+func getLessonInfoWithoutType(lessonInfo string, reFindSubGroup *regexp.Regexp) (string, string) {
+	subGroupLesson := reFindSubGroup.FindString(lessonInfo)
+
+	// add spaces next to special characters (so that there are more hyphenation options when drawing)
+	subLessonNameReplaced := afterSpecCharAdder.Replace(lessonInfo)
+
+	subLessonName := getSubLessonName(subLessonNameReplaced, subGroupLesson)
+
+	return subLessonName, subGroupLesson
+}
+
+func getSubLessonName(name string, subGroupLesson string) string {
+	if subGroupLesson != "" {
+		return strings.ReplaceAll(name, "- "+subGroupLesson, "")
+	}
+
+	return name
 }
 
 // getGroupScheduleURL returns the url to the group's schedule on UlSTU site.

@@ -80,8 +80,10 @@ func determineLessonType(lessonType string) types.LessonType {
 		return types.Lecture
 	case "пр":
 		return types.Practice
-	default:
+	case "лаб":
 		return types.Laboratory
+	default:
+		return types.Unknown
 	}
 }
 
@@ -263,4 +265,101 @@ func setFont(fontSize float64, dc *gg.Context) {
 		Size: fontSize,
 	})
 	dc.SetFontFace(face)
+}
+
+// GetFullSchedule returns the full  schedule.
+func GetFullSchedule(name string, url string, typeSchedule types.ScheduleType) (*types.Schedule, error) {
+	// this group is not on the website with a schedule (the name does not exist or the schedule has not been loaded yet)
+	if url == "" {
+		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: -1, WeekDayNum: -1}
+	}
+
+	doc, err := getDocFromURL(url)
+	if err != nil {
+		return nil, err
+	}
+
+	schedule := &types.Schedule{}
+
+	pSelection := doc.Find("p")
+
+	// we have schedule of two weeks
+	if pSelection.Length() == 182 {
+		firstWeekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
+		firstWeekNumDisplay, _ := strconv.Atoi(strings.Split(firstWeekNumStr, "-")[0])
+		schedule.Weeks[0].Number = firstWeekNumDisplay
+
+		secondWeekNumStr := strings.Split(pSelection.Get(91).LastChild.LastChild.Data, ": ")[1]
+		secondWeekNumDisplay, _ := strconv.Atoi(strings.Split(secondWeekNumStr, "-")[0])
+		schedule.Weeks[1].Number = secondWeekNumDisplay
+
+		pSelection.Each(func(i int, s *goquery.Selection) {
+			iMod10 := i % 10
+			iDiv10 := i / 10
+
+			// first week lessons
+			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
+				dayIdx := iDiv10 - 2
+				lessonIdx := iMod10 - 2
+				schedule.Weeks[0].Days[dayIdx].WeekNumber = firstWeekNumDisplay
+				if typeSchedule == types.Group {
+					schedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
+						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
+				}
+				if typeSchedule == types.Teacher {
+					schedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, s)
+				}
+			}
+			// second week lessons
+			if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
+				var lessonIdx, dayIdx int
+				if iMod10 == 0 {
+					lessonIdx = 7
+					dayIdx = iDiv10 - 12
+				} else {
+					lessonIdx = iMod10 - 3
+					dayIdx = iDiv10 - 11
+				}
+				schedule.Weeks[1].Days[dayIdx].WeekNumber = secondWeekNumDisplay
+				if typeSchedule == types.Group {
+					schedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
+						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
+				}
+				if typeSchedule == types.Teacher {
+					schedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, s)
+				}
+			}
+		})
+	} else {
+		// we have one school week schedule
+		weekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
+		weekNumDisplay, _ := strconv.Atoi(strings.Split(weekNumStr, "-")[0])
+		weekNum := (weekNumDisplay + 1) % 2
+
+		schedule.Weeks[weekNum].Number = weekNumDisplay
+
+		pSelection.Each(func(i int, s *goquery.Selection) {
+			iMod10 := i % 10
+			iDiv10 := i / 10
+
+			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
+				dayIdx := iDiv10 - 2
+				lessonIdx := iMod10 - 2
+				schedule.Weeks[weekNum].Days[dayIdx].WeekNumber = weekNumDisplay
+				if typeSchedule == types.Group {
+					schedule.Weeks[weekNum].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
+						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
+				}
+				if typeSchedule == types.Teacher {
+					schedule.Weeks[weekNum].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, s)
+				}
+			}
+		})
+	}
+
+	if IsFullScheduleEmpty(schedule) {
+		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: -1, WeekDayNum: -1}
+	}
+
+	return schedule, nil
 }
