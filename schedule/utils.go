@@ -34,6 +34,9 @@ const (
 	magicWeekDelta = 5 // 5 or 34
 )
 
+//go:embed assets/week_schedule_teacher_template.png
+var weekScheduleTemp []byte
+
 //go:embed assets/Arial.ttf
 var font []byte
 
@@ -362,4 +365,95 @@ func GetFullSchedule(name string, url string, typeSchedule types.ScheduleType) (
 	}
 
 	return schedule, nil
+}
+
+// GetImgByWeekSchedule return path on img of schedule
+func GetImgByWeekSchedule(
+	schedule *types.Week,
+	name string,
+	weekNum int,
+	headingFontSize float64,
+	drawLessonForWeekSchedule func(lesson *types.Lesson, x float64, y float64, dc *gg.Context)) (string, error) {
+	// loads an template of an empty table that will be filled in pairs
+	tableImg := getWeekScheduleTmplImg(weekScheduleTemp)
+	dc := gg.NewContextForImage(tableImg)
+
+	setFont(headingFontSize, dc)
+	dc.SetRGB255(25, 89, 209)
+	dc.DrawString(name, 515, 60)
+	dc.DrawString(fmt.Sprintf("%d-ая", schedule.Number), imgWidth-105, 60)
+
+	setDefaultSettings(dc)
+
+	currWeekNum, currWeekDayNum := GetWeekAndWeekDayNumbers(0)
+
+	for row := 352; row < imgHeight; row += cellHeight {
+		rowNum := row/cellHeight - 2
+
+		x, y := float64(130), float64(row)
+
+		if rowNum == currWeekDayNum && currWeekDayNum != -1 && currWeekNum == weekNum {
+			highlightRow(row, dc)
+		}
+		scheduleDay := schedule.Days[rowNum]
+
+		for _, lesson := range scheduleDay.Lessons {
+			if len(lesson.SubLessons) > 0 {
+				drawLessonForWeekSchedule(&lesson, x, y, dc)
+			}
+			// moves on to the next lesson
+			x += cellWidth
+		}
+	}
+
+	weekSchedulePath := fmt.Sprintf("week_schedule%d.png", getRandInt())
+	return weekSchedulePath, dc.SavePNG(weekSchedulePath)
+}
+
+// ParseDaySchedule returns *types.Day received from types.Schedule regarding how many days have passed
+// relative to the current time.
+func ParseDaySchedule(schedule *types.Schedule, name string, daysAfterCurr int) (*types.Day, error) {
+	weekNum, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
+
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: weekNum, WeekDayNum: weekDayNum}
+	}
+
+	if schedule.Weeks[0].Number < 3 && schedule.Weeks[1].Number < 3 {
+		return &schedule.Weeks[weekNum].Days[weekDayNum], nil
+	}
+
+	return &schedule.Weeks[1].Days[weekDayNum], nil
+}
+
+// ParseWeekSchedule returns *types.Week received from *types.Schedule based on the selected school week.
+func ParseWeekSchedule(schedule *types.Schedule, name string, weekNum int) (*types.Week, error) {
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: weekNum, WeekDayNum: -1}
+	}
+
+	if schedule.Weeks[0].Number < 3 && schedule.Weeks[1].Number < 3 {
+		if weekNum < 0 || weekNum > 1 {
+			return nil, &types.IncorrectWeekNumberError{WeekNum: weekNum}
+		}
+		return &schedule.Weeks[weekNum], nil
+	}
+
+	if weekNum > 1 {
+		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: weekNum, WeekDayNum: -1}
+	}
+
+	return &schedule.Weeks[weekNum], nil
+}
+
+// ParseCurrWeekSchedule returns *types.Week received from *types.Schedule based on the current school week.
+func ParseCurrWeekSchedule(schedule *types.Schedule, name string) (*types.Week, error) {
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
+	return ParseWeekSchedule(schedule, name, currWeekNum)
+}
+
+// ParseNextWeekSchedule returns *types.Week received from *types.Schedule based on the next school week.
+func ParseNextWeekSchedule(schedule *types.Schedule, groupName string) (*types.Week, error) {
+	nextWeekNum, _ := GetWeekAndWeekDayNumbers(7)
+	return ParseWeekSchedule(schedule, groupName, nextWeekNum)
 }

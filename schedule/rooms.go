@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+const (
+	headingTableRoomFontSize = 38
+)
+
 // ConvertDayRoomScheduleToText converts the information that types.Day contains into text.
 func ConvertDayRoomScheduleToText(roomName string, daySchedule types.Day, daysAfterCurr int) string {
 	result := strings.Builder{}
@@ -47,4 +51,9 @@ func ConvertDayRoomScheduleToText(roomName string, daySchedule types.Day, daysAf
 	}
 
 	return result.String()
+}
+
+// GetImgByWeekRoomSchedule return path on img of schedule
+func GetImgByWeekRoomSchedule(schedule *types.Week, roomName string, weekNum int) (string, error) {
+	return GetImgByWeekSchedule(schedule, roomName, weekNum, headingTableTeacherFontSize, drawTeacherLessonForWeekSchedule)
 }
