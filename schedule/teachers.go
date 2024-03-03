@@ -6,7 +6,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fogleman/gg"
 	"github.com/ulstu-schedule/parser/types"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -16,8 +15,61 @@ const (
 	headingTableTeacherFontSize = 38
 )
 
-//go:embed assets/week_schedule_teacher_template.png
-var weekScheduleTeacherTemp []byte
+// GetTextDayTeacherSchedule returns a text representation of the day schedule.
+func GetTextDayTeacherSchedule(teacherName string, daysAfterCurr int) (string, error) {
+	schedule, err := GetDayTeacherSchedule(teacherName, daysAfterCurr)
+	if err != nil {
+		return "", err
+	}
+
+	return ConvertDayTeacherScheduleToText(teacherName, *schedule, daysAfterCurr), nil
+}
+
+// GetCurrWeekTeacherScheduleImg return img of current week schedule
+func GetCurrWeekTeacherScheduleImg(teacherName string) (string, error) {
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
+	return GetWeekTeacherScheduleImg(teacherName, currWeekNum)
+}
+
+// GetNextWeekTeacherScheduleImg return img of next week schedule
+func GetNextWeekTeacherScheduleImg(teacherName string) (string, error) {
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(7)
+	return GetWeekTeacherScheduleImg(teacherName, currWeekNum)
+}
+
+// GetCurrWeekTeacherSchedule return object of current week schedule
+func GetCurrWeekTeacherSchedule(teacherName string) (*types.Week, error) {
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
+	return GetWeekTeacherSchedule(teacherName, currWeekNum)
+}
+
+// GetNextWeekTeacherSchedule return object of next week schedule
+func GetNextWeekTeacherSchedule(teacherName string) (*types.Week, error) {
+	nextWeekNum, _ := GetWeekAndWeekDayNumbers(7)
+	return GetWeekTeacherSchedule(teacherName, nextWeekNum)
+}
+
+// GetWeekTeacherScheduleImg return path on img of schedule
+func GetWeekTeacherScheduleImg(teacherName string, weekNum int) (string, error) {
+	schedule, err := GetWeekTeacherSchedule(teacherName, weekNum)
+	if err != nil {
+		return "", err
+	}
+
+	return GetImgByWeekTeacherSchedule(schedule, teacherName, weekNum)
+}
+
+// ParseCurrWeekTeacherScheduleImg returns the path to the image with the week schedule based on the current school week.
+func ParseCurrWeekTeacherScheduleImg(schedule *types.Week, teacherName string) (string, error) {
+	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
+	return GetImgByWeekTeacherSchedule(schedule, teacherName, currWeekNum)
+}
+
+// ParseNextWeekTeacherScheduleImg returns the path to the image with the week schedule based on the next school week.
+func ParseNextWeekTeacherScheduleImg(schedule *types.Week, teacherName string) (string, error) {
+	nextWeekNum, _ := GetWeekAndWeekDayNumbers(7)
+	return GetImgByWeekTeacherSchedule(schedule, teacherName, nextWeekNum)
+}
 
 // GetTextDayTeacherScheduleByDate returns a text representation of the day schedule based on the the string
 // representation of the date.
@@ -41,7 +93,7 @@ func GetTextDayTeacherScheduleByDate(teacherName, inputDate string) (string, err
 		diffBetweenInputAndCurrDates++
 	}
 
-	return convertDayTeacherScheduleToText(teacherName, *schedule, diffBetweenInputAndCurrDates), nil
+	return ConvertDayTeacherScheduleToText(teacherName, *schedule, diffBetweenInputAndCurrDates), nil
 }
 
 // GetDayTeacherScheduleByDate returns *types.Day received from the full schedule based on the string representation
@@ -78,7 +130,7 @@ func GetTextDayTeacherScheduleByWeekDay(teacherName, weekDay string) (string, er
 	}
 	weekDayNum := convertWeekDayToWeekDayIdx(weekDay)
 
-	return convertDayTeacherScheduleToText(teacherName, *schedule, weekDayNum-weekDayNumNow), nil
+	return ConvertDayTeacherScheduleToText(teacherName, *schedule, weekDayNum-weekDayNumNow), nil
 }
 
 // GetDayTeacherScheduleByWeekDay returns *types.Day received from the full schedule based on the selected day of the
@@ -98,16 +150,6 @@ func GetDayTeacherScheduleByWeekDay(teacherName, weekDay string) (*types.Day, er
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
 }
 
-// GetTextDayTeacherSchedule returns a text representation of the day schedule.
-func GetTextDayTeacherSchedule(teacherName string, daysAfterCurr int) (string, error) {
-	schedule, err := GetDayTeacherSchedule(teacherName, daysAfterCurr)
-	if err != nil {
-		return "", err
-	}
-
-	return convertDayTeacherScheduleToText(teacherName, *schedule, daysAfterCurr), nil
-}
-
 // GetDayTeacherSchedule returns *types.Day received from the full schedule regarding how many days have passed relative to the current time.
 func GetDayTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, error) {
 	schedule, err := GetFullTeacherSchedule(teacherName)
@@ -122,30 +164,6 @@ func GetDayTeacherSchedule(teacherName string, daysAfterCurr int) (*types.Day, e
 	}
 
 	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
-}
-
-// GetCurrWeekTeacherScheduleImg return img of current week schedule
-func GetCurrWeekTeacherScheduleImg(teacherName string) (string, error) {
-	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
-	return GetWeekTeacherScheduleImg(teacherName, currWeekNum)
-}
-
-// GetNextWeekTeacherScheduleImg return img of next week schedule
-func GetNextWeekTeacherScheduleImg(teacherName string) (string, error) {
-	currWeekNum, _ := GetWeekAndWeekDayNumbers(7)
-	return GetWeekTeacherScheduleImg(teacherName, currWeekNum)
-}
-
-// GetCurrWeekTeacherSchedule return object of current week schedule
-func GetCurrWeekTeacherSchedule(teacherName string) (*types.Week, error) {
-	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
-	return GetWeekTeacherSchedule(teacherName, currWeekNum)
-}
-
-// GetNextWeekTeacherSchedule return object of next week schedule
-func GetNextWeekTeacherSchedule(teacherName string) (*types.Week, error) {
-	nextWeekNum, _ := GetWeekAndWeekDayNumbers(7)
-	return GetWeekTeacherSchedule(teacherName, nextWeekNum)
 }
 
 // GetWeekTeacherSchedule return object of week schedule
@@ -166,56 +184,13 @@ func GetWeekTeacherSchedule(teacherName string, weekNum int) (*types.Week, error
 	return &schedule.Weeks[weekNum], nil
 }
 
-// GetWeekTeacherScheduleImg return path on img of schedule
-func GetWeekTeacherScheduleImg(teacherName string, weekNum int) (string, error) {
-	schedule, err := GetWeekTeacherSchedule(teacherName, weekNum)
-	if err != nil {
-		return "", err
-	}
-
-	return ParseTeacherWeekSchedule(schedule, teacherName, weekNum)
-}
-
-// ParseTeacherWeekSchedule return path on img of schedule
-func ParseTeacherWeekSchedule(schedule *types.Week, teacherName string, weekNum int) (string, error) {
-	// loads an template of an empty table that will be filled in pairs
-	tableImg := getWeekScheduleTmplImg(weekScheduleTeacherTemp)
-	dc := gg.NewContextForImage(tableImg)
-
-	setFont(headingTableTeacherFontSize, dc)
-	dc.SetRGB255(25, 89, 209)
-	dc.DrawString(teacherName, 515, 60)
-	dc.DrawString(fmt.Sprintf("%d-ая", weekNum+1), imgWidth-105, 60)
-
-	setDefaultSettings(dc)
-
-	currWeekNum, currWeekDayNum := GetWeekAndWeekDayNumbers(0)
-
-	for row := 352; row < imgHeight; row += cellHeight {
-		rowNum := row/cellHeight - 2
-
-		x, y := float64(130), float64(row)
-
-		if rowNum == currWeekDayNum && currWeekDayNum != -1 && currWeekNum == weekNum {
-			highlightRow(row, dc)
-		}
-		scheduleDay := schedule.Days[rowNum]
-
-		for _, lesson := range scheduleDay.Lessons {
-			if len(lesson.SubLessons) > 0 {
-				drawLessonForWeekSchedule(&lesson, dc, x, y)
-			}
-			// переходит к следующей паре
-			x += cellWidth
-		}
-	}
-
-	weekSchedulePath := fmt.Sprintf("week_schedule%d.png", getRandInt())
-	return weekSchedulePath, dc.SavePNG(weekSchedulePath)
+// GetImgByWeekTeacherSchedule return path on img of schedule
+func GetImgByWeekTeacherSchedule(schedule *types.Week, teacherName string, weekNum int) (string, error) {
+	return GetImgByWeekSchedule(schedule, teacherName, weekNum, headingTableTeacherFontSize, drawTeacherLessonForWeekSchedule)
 }
 
 // drawLessonForWeekSchedule - rendering schedule of lesson
-func drawLessonForWeekSchedule(lesson *types.Lesson, dc *gg.Context, x, y float64) {
+func drawTeacherLessonForWeekSchedule(lesson *types.Lesson, x, y float64, dc *gg.Context) {
 	subLessons := lesson.SubLessons
 
 	groups := lesson.GetGroupsTeacherLesson()
@@ -246,58 +221,11 @@ func GetFullTeacherSchedule(teacher string) (*types.Schedule, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	doc, err := getDocFromURL(teacherURL)
-	if err != nil {
-		return nil, err
-	}
-
-	teacherSchedule := new(types.Schedule)
-
-	pSelection := doc.Find("p")
-
-	if pSelection.Length() == 182 {
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			// first week lessons
-			if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-				dayIdx := i/10 - 2
-				lessonIdx := i%10 - 2
-				teacherSchedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
-			}
-			// second week lessons
-			if 113 <= i && i <= 170 && (i%10 == 0 || i%10 >= 3) {
-				var dayIdx, lessonIdx int
-				if i%10 == 0 {
-					lessonIdx = 7
-				} else {
-					lessonIdx = i%10 - 3
-				}
-				if i == 170 {
-					dayIdx = 5
-				} else {
-					dayIdx = (i/10)%10 - 1
-				}
-				teacherSchedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
-			}
-		})
-	} else {
-		weekNumStr := pSelection.Get(0).LastChild.LastChild.Data
-		weekNum, _ := strconv.Atoi(string(strings.Split(weekNumStr, ": ")[1][0]))
-
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			if 22 <= i && i <= 79 && 2 <= i%10 && i%10 <= 9 {
-				dayIdx := i/10 - 2
-				lessonIdx := i%10 - 2
-				teacherSchedule.Weeks[weekNum-1].Days[dayIdx].Lessons[lessonIdx] = *getTeacherLessonFromDoc(teacher, lessonIdx, s)
-			}
-		})
-	}
-
-	return teacherSchedule, nil
+	return GetFullSchedule(teacher, teacherURL, types.Teacher)
 }
 
-// convertDayTeacherScheduleToText converts the information that types.Day contains into text.
-func convertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, daysAfterCurr int) string {
+// ConvertDayTeacherScheduleToText converts the information that types.Day contains into text.
+func ConvertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, daysAfterCurr int) string {
 	result := strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)
@@ -339,8 +267,8 @@ func convertDayTeacherScheduleToText(teacherName string, daySchedule types.Day, 
 	return result.String()
 }
 
-// getTeacherLessonFromDoc returns *types.Lesson received from the HTML document.
-func getTeacherLessonFromDoc(teacher string, lessonIdx int, s *goquery.Selection) *types.Lesson {
+// parseTeacherLesson returns *types.Lesson received from the HTML document.
+func parseTeacherLesson(teacher string, lessonIdx int, s *goquery.Selection) *types.Lesson {
 	lesson := types.Lesson{}
 	tableCellHTML, _ := s.Find("font").Html()
 	// if the table cell contains the lesson info

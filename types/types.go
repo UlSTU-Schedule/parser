@@ -81,6 +81,43 @@ func (l Lesson) StringTeacherLesson() string {
 	return ""
 }
 
+// StringRoomLesson returns a string representation of Lesson based on the structure of the lesson display for rooms.
+func (l Lesson) StringRoomLesson() string {
+	if l.SubLessons != nil {
+		var lessonBuilder strings.Builder
+		_, _ = fmt.Fprintf(&lessonBuilder, "%d-ая пара (%s): ",
+			int(l.SubLessons[0].Duration)+1, l.SubLessons[0].Duration.String())
+
+		if len(l.SubLessons) == 1 {
+			lessonBuilder.WriteString(l.SubLessons[0].StringRoomSubLesson())
+		} else {
+			var subLessonsBuilder strings.Builder
+			for _, subLesson := range l.SubLessons {
+				if strings.Contains(subLesson.Name, subLesson.Teacher) || strings.Contains(subLesson.Name, subLesson.Room) {
+					continue
+				}
+
+				subgroupLessonInfo := fmt.Sprintf("%s; ", subLesson.StringRoomSubLesson())
+				if !strings.Contains(subLessonsBuilder.String(), subgroupLessonInfo) {
+					subLessonsBuilder.WriteString(subgroupLessonInfo)
+				}
+			}
+			lessonBuilder.WriteString(strings.TrimSuffix(subLessonsBuilder.String(), "; "))
+		}
+		lessonBuilder.WriteString("\n\n")
+		return lessonBuilder.String()
+	}
+	return ""
+}
+
+// ScheduleType is the type of the schedule
+type ScheduleType int
+
+const (
+	Group ScheduleType = iota
+	Teacher
+)
+
 // LessonType is the type of the lesson. Can take 3 values: Lecture, Laboratory and Practice.
 type LessonType int
 
@@ -88,10 +125,11 @@ const (
 	Lecture LessonType = iota
 	Laboratory
 	Practice
+	Unknown
 )
 
 func (lt LessonType) String() string {
-	return [...]string{"Лек.", "Лаб.", "Пр."}[lt]
+	return [...]string{"Лек.", "Лаб.", "Пр.", ""}[lt]
 }
 
 // Duration represents the lesson's duration.
@@ -111,15 +149,47 @@ type SubLesson struct {
 	Name     string     `json:"name"`
 	Teacher  string     `json:"teacher"`
 	Room     string     `json:"room"`
+	Practice string     `json:"practice"`
+	SubGroup string     `json:"sub_group"`
+}
+
+// StringGroup returns a string representation of SubLesson based on the structure of the lesson display for groups.
+func (sl SubLesson) StringGroup() string {
+	if sl.SubGroup != "" {
+		return fmt.Sprintf("%s, %s, аудитория %s",
+			sl.Teacher, sl.SubGroup, sl.Room)
+	}
+	return fmt.Sprintf("%s, аудитория %s",
+		sl.Teacher, sl.Room)
 }
 
 // StringGroupSubLesson returns a string representation of SubLesson based on the structure of the lesson display for groups.
 func (sl SubLesson) StringGroupSubLesson() string {
 	if sl.Name != "" {
 		if sl.Teacher != "" {
+			if sl.SubGroup != "" {
+				return fmt.Sprintf("%s %s, %s, %s, аудитория %s", sl.Type, sl.Name, sl.Teacher, sl.SubGroup, sl.Room)
+			}
 			return fmt.Sprintf("%s %s, %s, аудитория %s", sl.Type, sl.Name, sl.Teacher, sl.Room)
+		} else if sl.Practice != "" {
+			return fmt.Sprintf("%s %s, %s", sl.Type, sl.Name, sl.Practice)
 		} else {
+			if sl.SubGroup != "" {
+				return fmt.Sprintf("%s %s, %s, аудитория %s", sl.Type, sl.Name, sl.SubGroup, sl.Room)
+			}
 			return fmt.Sprintf("%s %s, аудитория %s", sl.Type, sl.Name, sl.Room)
+		}
+	}
+	return ""
+}
+
+// StringRoomSubLesson returns a string representation of SubLesson based on the structure of the lesson display for rooms.
+func (sl SubLesson) StringRoomSubLesson() string {
+	if sl.Name != "" {
+		if sl.Teacher != "" {
+			return fmt.Sprintf("%s, %s, группа %s, преподаватель %s", sl.Type, sl.Name, sl.Group, sl.Teacher)
+		} else {
+			return fmt.Sprintf("%s, %s, группа %s", sl.Type, sl.Name, sl.Group)
 		}
 	}
 	return ""
