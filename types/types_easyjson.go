@@ -338,6 +338,10 @@ func easyjson6601e8cdDecodeGithubComUlstuScheduleParserTypes4(in *jlexer.Lexer, 
 			out.Teacher = string(in.String())
 		case "room":
 			out.Room = string(in.String())
+		case "practice":
+			out.Practice = string(in.String())
+		case "sub_group":
+			out.SubGroup = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -381,6 +385,16 @@ func easyjson6601e8cdEncodeGithubComUlstuScheduleParserTypes4(out *jwriter.Write
 		const prefix string = ",\"room\":"
 		out.RawString(prefix)
 		out.String(string(in.Room))
+	}
+	{
+		const prefix string = ",\"practice\":"
+		out.RawString(prefix)
+		out.String(string(in.Practice))
+	}
+	{
+		const prefix string = ",\"sub_group\":"
+		out.RawString(prefix)
+		out.String(string(in.SubGroup))
 	}
 	out.RawByte('}')
 }
