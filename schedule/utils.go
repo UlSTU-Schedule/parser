@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +32,8 @@ const (
 	cellWidth  = 200
 	cellHeight = 150
 
-	magicWeekDelta = 5 // 5 or 34
+	maxScheduleWeekCount = 2
+	lengthScheduleTable  = 91
 )
 
 //go:embed assets/week_schedule_teacher_template.png
@@ -42,6 +44,32 @@ var font []byte
 
 // weekDays represents string values of the days of week.
 var weekDays = [7]string{"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"}
+
+// ParseCurrWeekSchedule returns *types.Week received from *types.Schedule based on the current school week.
+func ParseCurrWeekSchedule(schedule *types.Schedule, name string) (*types.Week, error) {
+	currWeekDate, _ := getWeekDateAndWeekDay(0)
+	return parseWeekSchedule(schedule, name, currWeekDate)
+}
+
+// ParseNextWeekSchedule returns *types.Week received from *types.Schedule based on the next school week.
+func ParseNextWeekSchedule(schedule *types.Schedule, groupName string) (*types.Week, error) {
+	nextWeekDate, _ := getWeekDateAndWeekDay(7)
+	return parseWeekSchedule(schedule, groupName, nextWeekDate)
+}
+
+// ParseDaySchedule returns *types.Day received from types.Schedule regarding how many days have passed
+// relative to the current time.
+func ParseDaySchedule(schedule *types.Schedule, name string, daysAfterCurr int) (*types.Day, error) {
+	weekDate, weekDayNum := getWeekDateAndWeekDay(daysAfterCurr)
+
+	weekNum := getScheduleWeekNumDyDate(schedule, weekDate)
+
+	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
+		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: weekNum, WeekDayNum: weekDayNum}
+	}
+
+	return &schedule.Weeks[weekNum].Days[weekDayNum], nil
+}
 
 // getDocFromURL returns goquery document representation of the page with the schedule.
 func getDocFromURL(URL string) (*goquery.Document, error) {
@@ -90,29 +118,11 @@ func determineLessonType(lessonType string) types.LessonType {
 	}
 }
 
-// GetWeekAndWeekDayNumbersByDate returns the number of the school week (0 or 1) and the number of the day of the
-// school week (0, ..., 6) by the string representation of the date.
-func GetWeekAndWeekDayNumbersByDate(date string) (weekNum int, weekDayNum int, err error) {
-	dateTime, err := getDateTime(date)
-	if err != nil {
-		return
-	}
-	weekNum, weekDayNum = getWeekAndWeekDayNumbersByTime(dateTime)
-	return
-}
-
-// GetWeekAndWeekDayNumbersByWeekDay returns the numbers of the selected day of the week in the current week and the current week number.
-func GetWeekAndWeekDayNumbersByWeekDay(weekDay string) (int, int) {
-	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
-	weekDayNum := convertWeekDayToWeekDayIdx(weekDay)
-	return currWeekNum, weekDayNum
-}
-
-// GetWeekAndWeekDayNumbers increases the current time by daysDelta days and returns the numbers of the school week and day of the week.
-func GetWeekAndWeekDayNumbers(additionalDays int) (int, int) {
+// getWeekDateAndWeekDay get week date and week day
+func getWeekDateAndWeekDay(additionalDays int) (time.Time, int) {
 	// getting the current time and adding additionalDays days to it
 	currTimeWithDelta := time.Now().AddDate(0, 0, additionalDays)
-	return getWeekAndWeekDayNumbersByTime(currTimeWithDelta)
+	return getWeekDateAndWeekDayByTime(currTimeWithDelta)
 }
 
 // getDateStr increases the current time by daysDelta days and returns the string representation of the new date.
@@ -121,36 +131,13 @@ func getDateStr(additionalDays int) string {
 	return timeWithDelta.Format("02.01.2006")
 }
 
-// convertWeekDayToWeekDayIdx converts the string representation of the day of the week to its index in the array.
-func convertWeekDayToWeekDayIdx(weekDay string) int {
-	switch strings.ToLower(weekDay) {
-	case "понедельник":
-		return 0
-	case "вторник":
-		return 1
-	case "среда":
-		return 2
-	case "четверг":
-		return 3
-	case "пятница":
-		return 4
-	case "суббота":
-		return 5
-	default:
-		return 6
-	}
-}
-
-// getWeekAndWeekDayNumbersByTime returns the number of the school week (0 or 1) and the number of the day of the
-// school week (0, ..., 6) by time.
-func getWeekAndWeekDayNumbersByTime(time time.Time) (weekNum int, weekDayNum int) {
-	weekDayNum = int(time.Weekday()) - 1
+// getWeekDateAndWeekDayByTime
+func getWeekDateAndWeekDayByTime(weekDate time.Time) (time.Time, int) {
+	weekDayNum := int(weekDate.Weekday()) - 1
 	if weekDayNum == -1 {
 		weekDayNum = 6
 	}
-	_, currWeekNumWithDelta := time.ISOWeek()
-	weekNum = (currWeekNumWithDelta + 1) % 2
-	return
+	return weekDate, weekDayNum
 }
 
 // getDateTime returns time.Time object from the string representation of the date.
@@ -270,8 +257,8 @@ func setFont(fontSize float64, dc *gg.Context) {
 	dc.SetFontFace(face)
 }
 
-// GetFullSchedule returns the full  schedule.
-func GetFullSchedule(name string, url string, typeSchedule types.ScheduleType) (*types.Schedule, error) {
+// getFullSchedule returns the full  schedule.
+func getFullSchedule(name string, url string, typeSchedule types.ScheduleType) (*types.Schedule, error) {
 	// this group is not on the website with a schedule (the name does not exist or the schedule has not been loaded yet)
 	if url == "" {
 		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: -1, WeekDayNum: -1}
@@ -285,80 +272,49 @@ func GetFullSchedule(name string, url string, typeSchedule types.ScheduleType) (
 	schedule := &types.Schedule{}
 
 	pSelection := doc.Find("p")
+	tablesSchedule := doc.Find("table")
 
-	// we have schedule of two weeks
-	if pSelection.Length() == 182 {
-		firstWeekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
-		firstWeekNumDisplay, _ := strconv.Atoi(strings.Split(firstWeekNumStr, "-")[0])
-		schedule.Weeks[0].Number = firstWeekNumDisplay
+	tablesSchedule.Each(func(tableIdx int, tableS *goquery.Selection) {
+		if tableIdx == maxScheduleWeekCount {
+			return
 
-		secondWeekNumStr := strings.Split(pSelection.Get(91).LastChild.LastChild.Data, ": ")[1]
-		secondWeekNumDisplay, _ := strconv.Atoi(strings.Split(secondWeekNumStr, "-")[0])
-		schedule.Weeks[1].Number = secondWeekNumDisplay
+		}
+		pTableSelection := tableS.Find("p")
 
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			iMod10 := i % 10
-			iDiv10 := i / 10
-
-			// first week lessons
-			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
-				dayIdx := iDiv10 - 2
-				lessonIdx := iMod10 - 2
-				schedule.Weeks[0].Days[dayIdx].WeekNumber = firstWeekNumDisplay
-				if typeSchedule == types.Group {
-					schedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
-						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
-				}
-				if typeSchedule == types.Teacher {
-					schedule.Weeks[0].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, s)
-				}
-			}
-			// second week lessons
-			if 113 <= i && i <= 170 && (iMod10 == 0 || iMod10 >= 3) {
-				var lessonIdx, dayIdx int
-				if iMod10 == 0 {
-					lessonIdx = 7
-					dayIdx = iDiv10 - 12
-				} else {
-					lessonIdx = iMod10 - 3
-					dayIdx = iDiv10 - 11
-				}
-				schedule.Weeks[1].Days[dayIdx].WeekNumber = secondWeekNumDisplay
-				if typeSchedule == types.Group {
-					schedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
-						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
-				}
-				if typeSchedule == types.Teacher {
-					schedule.Weeks[1].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, s)
-				}
-			}
-		})
-	} else {
-		// we have one school week schedule
-		weekNumStr := strings.Split(pSelection.Get(0).LastChild.LastChild.Data, ": ")[1]
+		weekNumStr := strings.Split(pSelection.Get(tableIdx*lengthScheduleTable).LastChild.LastChild.Data, ": ")[1]
 		weekNumDisplay, _ := strconv.Atoi(strings.Split(weekNumStr, "-")[0])
-		weekNum := (weekNumDisplay + 1) % 2
+		schedule.Weeks[tableIdx].Number = weekNumDisplay
 
-		schedule.Weeks[weekNum].Number = weekNumDisplay
-
-		pSelection.Each(func(i int, s *goquery.Selection) {
-			iMod10 := i % 10
-			iDiv10 := i / 10
-
-			if 22 <= i && i <= 79 && 2 <= iMod10 && iMod10 <= 9 {
+		pTableSelection.Each(func(pIdx int, pS *goquery.Selection) {
+			iMod10 := pIdx % 10
+			iDiv10 := pIdx / 10
+			// first week lessons. Условие для дней 21 <= i && i <= 79 && 1 <= iMod10 && iMod10 <= 9
+			if 20 <= pIdx && pIdx <= 79 && 0 <= iMod10 && iMod10 <= 8 {
 				dayIdx := iDiv10 - 2
-				lessonIdx := iMod10 - 2
-				schedule.Weeks[weekNum].Days[dayIdx].WeekNumber = weekNumDisplay
+				lessonIdx := iMod10 - 1
+
+				if pIdx == 20 {
+					dateStartWeek, dateEndWeek := parseDateScheduleWeek(findStartDayWeek, pS)
+					schedule.Weeks[tableIdx].DateStart = dateStartWeek
+					schedule.Weeks[tableIdx].DateEnd = dateEndWeek
+					return
+				}
+
+				if pIdx != 20 && iMod10 == 0 {
+					return
+				}
+
+				schedule.Weeks[tableIdx].Days[dayIdx].WeekNumber = weekNumDisplay
 				if typeSchedule == types.Group {
-					schedule.Weeks[weekNum].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
-						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, s)
+					schedule.Weeks[tableIdx].Days[dayIdx].Lessons[lessonIdx] = *parseGroupLesson(name, lessonIdx,
+						findTeacherAndRoom, findTeacher, findRoom, findSubGroup, pS)
 				}
 				if typeSchedule == types.Teacher {
-					schedule.Weeks[weekNum].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, s)
+					schedule.Weeks[tableIdx].Days[dayIdx].Lessons[lessonIdx] = *parseTeacherLesson(name, lessonIdx, pS)
 				}
 			}
 		})
-	}
+	})
 
 	if IsFullScheduleEmpty(schedule) {
 		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: -1, WeekDayNum: -1}
@@ -371,7 +327,7 @@ func GetFullSchedule(name string, url string, typeSchedule types.ScheduleType) (
 func GetImgByWeekSchedule(
 	schedule *types.Week,
 	name string,
-	weekNum int,
+	isCurrWeek bool,
 	headingFontSize float64,
 	drawLessonForWeekSchedule func(lesson *types.Lesson, x float64, y float64, dc *gg.Context)) (string, error) {
 	// loads an template of an empty table that will be filled in pairs
@@ -385,14 +341,14 @@ func GetImgByWeekSchedule(
 
 	setDefaultSettings(dc)
 
-	currWeekNum, currWeekDayNum := GetWeekAndWeekDayNumbers(0)
+	_, currWeekDayNum := getWeekDateAndWeekDay(0)
 
 	for row := 352; row < imgHeight; row += cellHeight {
 		rowNum := row/cellHeight - 2
 
 		x, y := float64(130), float64(row)
 
-		if rowNum == currWeekDayNum && currWeekDayNum != -1 && currWeekNum == weekNum {
+		if rowNum == currWeekDayNum && currWeekDayNum != -1 && isCurrWeek {
 			highlightRow(row, dc)
 		}
 		scheduleDay := schedule.Days[rowNum]
@@ -410,24 +366,10 @@ func GetImgByWeekSchedule(
 	return weekSchedulePath, dc.SavePNG(weekSchedulePath)
 }
 
-// ParseDaySchedule returns *types.Day received from types.Schedule regarding how many days have passed
-// relative to the current time.
-func ParseDaySchedule(schedule *types.Schedule, name string, daysAfterCurr int) (*types.Day, error) {
-	weekNum, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
-
-	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
-		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: weekNum, WeekDayNum: weekDayNum}
-	}
-
-	if schedule.Weeks[0].Number < 3 && schedule.Weeks[1].Number < 3 {
-		return &schedule.Weeks[weekNum].Days[weekDayNum], nil
-	}
-
-	return &schedule.Weeks[1].Days[weekDayNum], nil
-}
-
 // ParseWeekSchedule returns *types.Week received from *types.Schedule based on the selected school week.
-func ParseWeekSchedule(schedule *types.Schedule, name string, weekNum int) (*types.Week, error) {
+func parseWeekSchedule(schedule *types.Schedule, name string, weekDate time.Time) (*types.Week, error) {
+	weekNum := getScheduleWeekNumDyDate(schedule, weekDate)
+
 	if IsWeekScheduleEmpty(schedule.Weeks[weekNum]) {
 		return nil, &types.UnavailableScheduleError{Name: name, WeekNum: weekNum, WeekDayNum: -1}
 	}
@@ -446,14 +388,43 @@ func ParseWeekSchedule(schedule *types.Schedule, name string, weekNum int) (*typ
 	return &schedule.Weeks[weekNum], nil
 }
 
-// ParseCurrWeekSchedule returns *types.Week received from *types.Schedule based on the current school week.
-func ParseCurrWeekSchedule(schedule *types.Schedule, name string) (*types.Week, error) {
-	currWeekNum, _ := GetWeekAndWeekDayNumbers(0)
-	return ParseWeekSchedule(schedule, name, currWeekNum)
+func getScheduleWeekNumDyDate(schedule *types.Schedule, weekDate time.Time) int {
+	var weekNumSchedule int
+	for weekNum, week := range schedule.Weeks {
+		isInRange := isInTimeRange(weekDate, week.DateStart, week.DateEnd)
+		if isInRange {
+			weekNumSchedule = weekNum
+			break
+		}
+	}
+	return weekNumSchedule
 }
 
-// ParseNextWeekSchedule returns *types.Week received from *types.Schedule based on the next school week.
-func ParseNextWeekSchedule(schedule *types.Schedule, groupName string) (*types.Week, error) {
-	nextWeekNum, _ := GetWeekAndWeekDayNumbers(7)
-	return ParseWeekSchedule(schedule, groupName, nextWeekNum)
+func isInTimeRange(weekDate time.Time, start time.Time, end time.Time) bool {
+	return weekDate.After(start) && weekDate.Before(end)
+}
+
+func parseDateScheduleWeek(reFindStartDayWeek *regexp.Regexp, s *goquery.Selection) (time.Time, time.Time) {
+	dayStartWeekHTML, _ := s.Find("b").Html()
+	if dayStartWeekHTML != "" {
+		dayStartWeek := reFindStartDayWeek.FindString(dayStartWeekHTML)
+
+		dateStartWeek, _ := getDateStartWeek(dayStartWeek)
+
+		dateEndWeek := dateStartWeek.AddDate(0, 0, 7)
+		return dateStartWeek, dateEndWeek
+	}
+	return time.Now(), time.Now()
+}
+
+func getDateStartWeek(dayStartWeek string) (time.Time, error) {
+	year, month, day := time.Now().Date()
+
+	dayStartWeekNum, _ := strconv.Atoi(dayStartWeek)
+	if dayStartWeekNum < day {
+		month += 1
+	}
+
+	dateString := fmt.Sprintf("%d/%d/%d", year, month, dayStartWeekNum)
+	return time.Parse("2006/1/2", dateString)
 }

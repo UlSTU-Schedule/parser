@@ -5,6 +5,7 @@ package types
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Schedule represents the full schedule that contains two school Weeks.
@@ -15,8 +16,10 @@ type Schedule struct {
 
 // Week represents the school week (one of two schedule tables) that contains seventh Days.
 type Week struct {
-	Number int    `json:"number"`
-	Days   [7]Day `json:"days"`
+	Number    int       `json:"number"`
+	DateStart time.Time `json:"date_start"`
+	DateEnd   time.Time `json:"date_end"`
+	Days      [7]Day    `json:"days"`
 }
 
 // Day represents the school day (the row in the schedule table) that contains eight Lessons.
@@ -28,6 +31,19 @@ type Day struct {
 // Lesson represents the lesson (the cell in the schedule table) that can contain one or more SubLessons.
 type Lesson struct {
 	SubLessons []SubLesson `json:"sub_lessons"`
+}
+
+// SubLesson represents the nested lesson. During the time of one lesson, a group or teacher can have several
+// SubLessons at the same time.
+type SubLesson struct {
+	Duration Duration   `json:"с"`
+	Type     LessonType `json:"type"`
+	Group    string     `json:"group"`
+	Name     string     `json:"name"`
+	Teacher  string     `json:"teacher"`
+	Room     string     `json:"room"`
+	Practice string     `json:"practice"`
+	SubGroup string     `json:"sub_group"`
 }
 
 // StringGroupLesson returns a string representation of Lesson based on the structure of the lesson display for groups.
@@ -138,19 +154,6 @@ type Duration int
 func (d Duration) String() string {
 	return [...]string{"08:30-09:50", "10:00-11:20", "11:30-12:50", "13:30-14:50", "15:00-16:20", "16:30-17:50",
 		"18:00-19:20", "19:30-20:50"}[d]
-}
-
-// SubLesson represents the nested lesson. During the time of one lesson, a group or teacher can have several
-// SubLessons at the same time.
-type SubLesson struct {
-	Duration Duration   `json:"duration"`
-	Type     LessonType `json:"type"`
-	Group    string     `json:"group"`
-	Name     string     `json:"name"`
-	Teacher  string     `json:"teacher"`
-	Room     string     `json:"room"`
-	Practice string     `json:"practice"`
-	SubGroup string     `json:"sub_group"`
 }
 
 // StringGroup returns a string representation of SubLesson based on the structure of the lesson display for groups.

@@ -112,6 +112,14 @@ func easyjson6601e8cdDecodeGithubComUlstuScheduleParserTypes1(in *jlexer.Lexer, 
 		switch key {
 		case "number":
 			out.Number = int(in.Int())
+		case "date_start":
+			if data := in.Raw(); in.Ok() {
+				in.AddError((out.DateStart).UnmarshalJSON(data))
+			}
+		case "date_end":
+			if data := in.Raw(); in.Ok() {
+				in.AddError((out.DateEnd).UnmarshalJSON(data))
+			}
 		case "days":
 			if in.IsNull() {
 				in.Skip()
@@ -147,6 +155,16 @@ func easyjson6601e8cdEncodeGithubComUlstuScheduleParserTypes1(out *jwriter.Write
 		const prefix string = ",\"number\":"
 		out.RawString(prefix[1:])
 		out.Int(int(in.Number))
+	}
+	{
+		const prefix string = ",\"date_start\":"
+		out.RawString(prefix)
+		out.Raw((in.DateStart).MarshalJSON())
+	}
+	{
+		const prefix string = ",\"date_end\":"
+		out.RawString(prefix)
+		out.Raw((in.DateEnd).MarshalJSON())
 	}
 	{
 		const prefix string = ",\"days\":"
@@ -326,7 +344,7 @@ func easyjson6601e8cdDecodeGithubComUlstuScheduleParserTypes4(in *jlexer.Lexer, 
 			continue
 		}
 		switch key {
-		case "duration":
+		case "с":
 			out.Duration = Duration(in.Int())
 		case "type":
 			out.Type = LessonType(in.Int())
@@ -338,6 +356,10 @@ func easyjson6601e8cdDecodeGithubComUlstuScheduleParserTypes4(in *jlexer.Lexer, 
 			out.Teacher = string(in.String())
 		case "room":
 			out.Room = string(in.String())
+		case "practice":
+			out.Practice = string(in.String())
+		case "sub_group":
+			out.SubGroup = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -353,7 +375,7 @@ func easyjson6601e8cdEncodeGithubComUlstuScheduleParserTypes4(out *jwriter.Write
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"duration\":"
+		const prefix string = ",\"с\":"
 		out.RawString(prefix[1:])
 		out.Int(int(in.Duration))
 	}
@@ -381,6 +403,16 @@ func easyjson6601e8cdEncodeGithubComUlstuScheduleParserTypes4(out *jwriter.Write
 		const prefix string = ",\"room\":"
 		out.RawString(prefix)
 		out.String(string(in.Room))
+	}
+	{
+		const prefix string = ",\"practice\":"
+		out.RawString(prefix)
+		out.String(string(in.Practice))
+	}
+	{
+		const prefix string = ",\"sub_group\":"
+		out.RawString(prefix)
+		out.String(string(in.SubGroup))
 	}
 	out.RawByte('}')
 }

@@ -15,18 +15,18 @@ func ConvertDayRoomScheduleToText(roomName string, daySchedule types.Day, daysAf
 	result := strings.Builder{}
 
 	dateStr := getDateStr(daysAfterCurr)
-	weekNum, weekDayNum := GetWeekAndWeekDayNumbers(daysAfterCurr)
+	_, weekDayNum := getWeekDateAndWeekDay(daysAfterCurr)
 
 	switch daysAfterCurr {
 	case 0:
 		_, _ = fmt.Fprintf(&result, "Расписание кабинента %s на сегодня (%s, %s, %d-ая учебная неделя):\n\n",
-			roomName, weekDays[weekDayNum], dateStr, weekNum+1)
+			roomName, weekDays[weekDayNum], dateStr, daySchedule.WeekNumber)
 	case 1:
 		_, _ = fmt.Fprintf(&result, "Расписание кабинента %s на завтра (%s, %s, %d-ая учебная неделя):\n\n",
-			roomName, weekDays[weekDayNum], dateStr, weekNum+1)
+			roomName, weekDays[weekDayNum], dateStr, daySchedule.WeekNumber)
 	default:
 		_, _ = fmt.Fprintf(&result, "Расписание кабинента %s на %s (%s, %d-ая учебная неделя):\n\n", roomName,
-			dateStr, weekDays[weekDayNum], weekNum+1)
+			dateStr, weekDays[weekDayNum], daySchedule.WeekNumber)
 	}
 
 	noLessons := true
@@ -51,9 +51,4 @@ func ConvertDayRoomScheduleToText(roomName string, daySchedule types.Day, daysAf
 	}
 
 	return result.String()
-}
-
-// GetImgByWeekRoomSchedule return path on img of schedule
-func GetImgByWeekRoomSchedule(schedule *types.Week, roomName string, weekNum int) (string, error) {
-	return GetImgByWeekSchedule(schedule, roomName, weekNum, headingTableTeacherFontSize, drawTeacherLessonForWeekSchedule)
 }
