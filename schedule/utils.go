@@ -411,7 +411,7 @@ func parseDateScheduleWeek(reFindStartDayWeek *regexp.Regexp, s *goquery.Selecti
 
 		dateStartWeek, _ := getDateStartWeek(dayStartWeek)
 
-		dateEndWeek := dateStartWeek.AddDate(0, 0, 7)
+		dateEndWeek := dateStartWeek.AddDate(0, 0, 6)
 		return dateStartWeek, dateEndWeek
 	}
 	return time.Now(), time.Now()
@@ -421,7 +421,7 @@ func getDateStartWeek(dayStartWeek string) (time.Time, error) {
 	year, month, day := time.Now().Date()
 
 	dayStartWeekNum, _ := strconv.Atoi(dayStartWeek)
-	if dayStartWeekNum < day {
+	if dayStartWeekNum < 10 && day > 22 {
 		month += 1
 	}
 
