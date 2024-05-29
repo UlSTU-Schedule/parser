@@ -274,11 +274,11 @@ func getFullSchedule(name string, url string, typeSchedule types.ScheduleType) (
 	pSelection := doc.Find("p")
 	tablesSchedule := doc.Find("table")
 
-	tablesSchedule.Each(func(tableIdx int, tableS *goquery.Selection) {
+	tablesSchedule.EachWithBreak(func(tableIdx int, tableS *goquery.Selection) bool {
 		if tableIdx == maxScheduleWeekCount {
-			return
-
+			return false
 		}
+
 		pTableSelection := tableS.Find("p")
 
 		weekNumStr := strings.Split(pSelection.Get(tableIdx*lengthScheduleTable).LastChild.LastChild.Data, ": ")[1]
@@ -314,6 +314,8 @@ func getFullSchedule(name string, url string, typeSchedule types.ScheduleType) (
 				}
 			}
 		})
+
+		return true
 	})
 
 	if IsFullScheduleEmpty(schedule) {

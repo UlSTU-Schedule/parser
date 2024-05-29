@@ -1,0 +1,3 @@
+.PHONY: test
+test: ## запуск юнит-тестов
+	go test -cover -covermode=count ./...
